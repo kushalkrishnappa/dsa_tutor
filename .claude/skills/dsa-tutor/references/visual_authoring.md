@@ -2,10 +2,14 @@
 
 How to generate the two visual artifacts the tutor uses. Both are **self-contained HTML** — inline CSS/JS, no external `src`/`href`, no CDNs — written with the Write tool so they work offline and persist for the learner to revisit.
 
-- **Concept visuals** → `<project-root>/.dsa-tutor/visuals/<concept>.html` (slug the concept name, e.g. `breadth-first-search` → `bfs.html`).
-- **Roadmap maps** → `<project-root>/.dsa-tutor/roadmaps/<area>.html`.
+- **Concept visuals** → `<topic-folder>/.dsa-tutor/visuals/<concept>.html` (slug the concept name, e.g. `breadth-first-search` → `bfs.html`).
+- **Roadmap maps** → `<topic-folder>/.dsa-tutor/roadmap.html`.
+
+`<topic-folder>` is the active folder for the session — each DSA topic keeps its own visuals beside its own code. Paths recorded in `progress.json` are relative to that folder (`.dsa-tutor/visuals/bfs.html`).
 
 Create the directory on first write. Tell the learner to open the file (e.g. `file://<absolute-path>` or via the IDE).
+
+**These are dual-coding aids, not handouts.** A visual works when you narrate *while* the learner has it open, pointing at what's on screen. One generated at the end of a lecture and handed over unexplained does nothing.
 
 ---
 
