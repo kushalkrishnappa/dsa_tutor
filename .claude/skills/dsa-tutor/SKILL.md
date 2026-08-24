@@ -169,9 +169,18 @@ exception is an explicit "quiz me across everything", which is when you glob all
 
 When the learner starts a new area, decompose it into a prerequisite DAG from your own DSA
 knowledge and generate `<active-folder>/.dsa-tutor/roadmap.html` per `references/visual_authoring.md`
-(orthogonal connectors, phase labels, solid = prerequisite / dashed = next phase, current topic
-gold, stretch tier dashed). Record the ordered topic list with `status` in that folder's
-`progress.json`. Regenerate it with updated statuses when advancing.
+(orthogonal connectors, phase labels, solid = prerequisite / dashed = next phase, stretch tier
+dashed). Record the ordered topic list with `status` in that folder's `progress.json`.
+
+**The roadmap renders `topics[]` — it never drifts from it.** Completed topics are green with a `✓`,
+the one current topic is gold with `▶` and `YOU ARE HERE`, a started-but-parked topic is amber with
+`◐`; everything else keeps its tier colour. Every status table and colour rule lives in
+`references/visual_authoring.md` — **read it before writing any roadmap**, including edits to an
+existing one.
+
+Regenerating is part of the same checkpoint as the status change, not a later tidy-up: the moment a
+topic finishes or a new one starts, update `progress.json` and rewrite `roadmap.html` from it. If
+you ever look at a roadmap with no green and no gold, the statuses weren't read — fix it then.
 
 ## Practice problems
 
@@ -188,6 +197,8 @@ end, using the Write tool to overwrite the whole file. Each write updates:
 
 - `<active-folder>/.dsa-tutor/progress.json` — mastery, mnemonic, mistakes, aces, interval,
   calibration, `taught_back`, `practice_done`, topic statuses.
+- `<active-folder>/.dsa-tutor/roadmap.html` — **whenever a topic status changed in that write**,
+  regenerated from `topics[]` so the picture and the file never disagree.
 - `<repo-root>/.dsa-tutor/profile.json` — `last_session_date`, `streak`, that area's roll-up entry.
 
 Schema and examples live in `references/progress_schema.md` — read it when creating or updating so

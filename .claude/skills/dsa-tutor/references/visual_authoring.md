@@ -206,7 +206,20 @@ Keep each visual to ~6–14 steps. Put 1–2 questions at the moments a learner 
 
 A roadmap is a clean prerequisite DAG for one area. Style rules (validated): centered foundations spine, **right-angle (orthogonal) connectors** (never diagonal), phase labels down the left gutter, **solid arrow = prerequisite / dashed = next phase**, the learner's current/next topic highlighted gold, and an "advanced/stretch" tier drawn dashed.
 
-You supply: the area title, the `B` (boxes) map, the `L` (links) list, and the phase `labels`. Positions follow a tiered top-down grid; place each box so its children straddle it to keep connectors short and uncrossed. Status colors come from the progress file (`done`/`in-progress`/`not-started`).
+You supply: the area title, the `B` (boxes) map, the `L` (links) list, and the phase `labels`. Positions follow a tiered top-down grid; place each box so its children straddle it to keep connectors short and uncrossed.
+
+### The status contract (do not skip this)
+
+A box's `phase` is **status-first, tier-second**: if the topic has a status in `progress.json`, `phase` is that status; only a `not-started` topic falls back to its tier key (`found`/`core`/`app`/…). Translate every entry in `topics[]`, and give each status its glyph — the colour alone is too easy to misread, and the glyph is what survives a screenshot:
+
+| `progress.json` status | `phase` | Border | `label` prefix | `sub` |
+|---|---|---|---|---|
+| `done` | `'done'` | green | `✓ ` | as normal |
+| the `current` topic | `'current'` | gold, 3px, tinted fill | `▶ ` | lead with `YOU ARE HERE · ` |
+| `in-progress` (not current) | `'inprog'` | amber, tinted fill | `◐ ` | say what's left, e.g. `impl verified · practice parked` |
+| `not-started` | its tier key | tier colour | none | as normal |
+
+Exactly one box carries `'current'` — the topic named by `current` in `progress.json`. A roadmap where nothing is green and nothing is gold is a bug: it means the statuses were never read.
 
 Copy this whole file, replace `__AREA_TITLE__`, `B`, `L`, and `labels`:
 
@@ -219,21 +232,26 @@ Copy this whole file, replace `__AREA_TITLE__`, `B`, `L`, and `labels`:
 svg{width:100%;height:auto}</style></head>
 <body><div class="wrap">
 <h1>__AREA_TITLE__ — learning roadmap</h1>
-<p class="legend">Solid → prerequisite · Dashed ⇢ next phase · Gold = current/next · Dashed box = stretch</p>
+<p class="legend">✓ Green = done · Gold = current · Amber ◐ = started, unfinished · Solid → prerequisite · Dashed ⇢ next phase · Dashed box = stretch &nbsp;|&nbsp; updated __YYYY-MM-DD__</p>
 <svg id="map" viewBox="0 0 1120 850"></svg>
 </div>
 <script>
 const NS="http://www.w3.org/2000/svg",svg=document.getElementById('map'),W=200,H=54;
-const C={found:'#3b82f6',current:'#e0b341',core:'#3fb950',app:'#14b8a6',struct:'#f59e0b',sp:'#a855f7',adv:'#9ca3af'};
-// EDIT: boxes keyed by id -> {x,y,phase,label,sub}. phase 'current' highlights gold; 'adv' draws dashed.
+// The first three are RESERVED FOR STATUS. Never give a tier one of these hues, or a
+// not-started box in that tier becomes indistinguishable from a done/current/started one.
+const C={current:'#e0b341',done:'#2ea043',inprog:'#f59e0b',
+         found:'#3b82f6',core:'#3fb950',app:'#14b8a6',struct:'#ec4899',sp:'#a855f7',adv:'#9ca3af'};
+// EDIT: boxes keyed by id -> {x,y,phase,label,sub}.
+// phase = the box's STATUS if it has one, else its tier. 'adv' draws dashed.
 const B={
   /* example (graphs); replace per area */
-  term:{x:510,y:24,phase:'found',label:'Terminology',sub:'vertices · edges · paths'},
-  adt:{x:510,y:106,phase:'current',label:'Graph ADT',sub:'the interface'},
-  repr:{x:510,y:188,phase:'found',label:'Representations',sub:'adj list / matrix'}
+  term:{x:510,y:24, phase:'done',   label:'✓ Terminology',   sub:'vertices · edges · paths'},
+  adt: {x:510,y:106,phase:'current',label:'▶ Graph ADT',     sub:'YOU ARE HERE · the interface'},
+  dsu: {x:510,y:188,phase:'inprog', label:'◐ Union-Find',    sub:'impl verified · practice parked'},
+  repr:{x:510,y:270,phase:'found',  label:'Representations', sub:'adj list / matrix'}
 };
 // EDIT: links [from,to,type] where type 'p'=prerequisite(solid), 'n'=next-phase(dashed)
-const L=[['term','adt','p'],['adt','repr','p']];
+const L=[['term','adt','p'],['adt','dsu','p'],['dsu','repr','p']];
 // EDIT: left-gutter phase labels [text, phaseColorKey, centerY]
 const labels=[['FOUNDATIONS','found',110]];
 
@@ -256,7 +274,7 @@ labels.forEach(([txt,ph,cy])=>{const t=document.createElementNS(NS,'text');t.set
 Object.values(B).forEach(n=>{const col=C[n.phase],cur=n.phase==='current',adv=n.phase==='adv';
   const r=document.createElementNS(NS,'rect');r.setAttribute('x',n.x);r.setAttribute('y',n.y);
   r.setAttribute('width',W);r.setAttribute('height',H);r.setAttribute('rx','9');
-  r.setAttribute('fill',cur?'rgba(224,179,65,0.16)':'rgba(38,38,52,0.92)');
+  r.setAttribute('fill',cur?'rgba(224,179,65,0.16)':(n.phase==='inprog'?'rgba(245,158,11,0.10)':'rgba(38,38,52,0.92)'));
   r.setAttribute('stroke',col);r.setAttribute('stroke-width',cur?'3':'2');
   if(adv)r.setAttribute('stroke-dasharray','6,4');svg.appendChild(r);
   const t1=document.createElementNS(NS,'text');t1.setAttribute('x',n.x+14);t1.setAttribute('y',n.y+23);
@@ -268,4 +286,8 @@ Object.values(B).forEach(n=>{const col=C[n.phase],cur=n.phase==='current',adv=n.
 </html>
 ```
 
-When advancing a topic, regenerate the file with updated `phase`/status colors (mark completed topics `done`, set the new current topic to `phase:'current'`).
+### Keeping it true
+
+The roadmap is a **rendering of `topics[]`, not a separate record**. Whenever a topic's status changes, rewrite `progress.json` first, then regenerate the roadmap from it in the same checkpoint — flip the finished topic to `✓ done`, move `▶ current` to the new topic, and refresh the `updated` date in the legend. A roadmap that disagrees with `progress.json` is worse than no roadmap: the learner reads it as their map of where they are.
+
+Before writing the file, check it back against `topics[]`: every `done` green, exactly one gold, no `phase` key missing from `C` (an unknown key renders the border `undefined` and the box comes out invisible).
