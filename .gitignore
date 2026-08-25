@@ -1,2 +1,5 @@
 .superpowers
 .dsa-tutor
+.venv/
+__pycache__/
+*.egg-info/
