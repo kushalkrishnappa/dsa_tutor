@@ -1,0 +1,72 @@
+{
+  "area": "sliding-window",
+  "last_session_date": "2026-08-17",
+  "roadmap": ".dsa-tutor/roadmap.html",
+  "current": "Variable-Size Window (Shrinkable)",
+  "topics": [
+    { "name": "Window Invariant & Two-Pointer Mental Model", "status": "done" },
+    { "name": "Fixed-Size Window", "status": "done" },
+    { "name": "Variable-Size Window (Shrinkable)", "status": "in-progress" },
+    { "name": "Variable-Size Window (\"At Most K\" trick)", "status": "not-started" },
+    { "name": "Window + Frequency Map (Anagram / Min-Window)", "status": "not-started" },
+    { "name": "Exactly-K via AtMost(K) - AtMost(K-1)", "status": "not-started" },
+    { "name": "Sliding Window Max/Min (Monotonic Deque)", "status": "not-started" },
+    { "name": "Sliding Window + Binary Search", "status": "not-started" },
+    { "name": "Multiple / Nested Windows", "status": "not-started" }
+  ],
+  "concepts": [
+    {
+      "name": "Window Invariant & Two-Pointer Mental Model",
+      "mental_model": "An inchworm crawling along a branch: its front foot (R) reaches forward one leaf at a time; its back foot (L) only lifts and catches up when the stretch between them breaks the rule. The worm's body is always one contiguous stretch of branch — it never teleports to a leaf further down.",
+      "mnemonic": "An inchworm can't skip a leaf — sliding window only ever crawls (contiguous), never jumps (no subsequences).",
+      "mastery": "shaky",
+      "last_reviewed": "2026-08-17",
+      "review_interval": 1,
+      "aces": 1,
+      "past_mistakes": [
+        { "note": "First teach-back described the expand/shrink mechanics correctly but omitted WHY it's O(n) — didn't connect 'L and R only move forward' to the 2n bound on total work.", "high_confidence": false },
+        { "note": "Claimed removing the post-loop 'max_len = max(...)' line would break the last-character case, on the theory the loop exits before the last char is processed. Actually the loop body updates max_len for right = len(s)-1 BEFORE right increments past it — the last character's window is always scored inside the loop.", "high_confidence": true },
+        { "note": "On LC-3090 ('at most 2 occurrences of each char'), first attempt used a plain set (presence-only) plus one shared global 'k=2' budget spent across the whole string, instead of a per-character frequency map. Self-corrected to defaultdict(int) + shrink-while-count>2 once the misconception ('k is a global one-time pass, not per-character') was named. Lesson: reach for a frequency map, not a set, whenever the rule is 'how many times', not just 'has this been seen'.", "high_confidence": false }
+      ],
+      "visual": [".dsa-tutor/visuals/window-invariant.html"],
+      "practice_done": ["LC-3", "LC-1695", "LC-3090", "LC-2401"],
+      "calibration": { "confident_right": 1, "confident_wrong": 1, "unsure_right": 0, "unsure_wrong": 0 },
+      "taught_back": "2026-08-17"
+    },
+    {
+      "name": "Fixed-Size Window",
+      "mental_model": "A rigid train car exactly k seats long, rolling forward one seat at a time: one passenger boards the front, one gets bumped off the back, every single slide. Unlike the inchworm (topic 1), it never stretches or shrinks.",
+      "mnemonic": "Same R twice: add nums[R], drop nums[R-k]. Both use the NEW right index, never the old one.",
+      "mastery": "solid",
+      "last_reviewed": "2026-08-19",
+      "review_interval": 3,
+      "aces": 1,
+      "past_mistakes": [
+        { "note": "Pretest: described the outgoing index as 'i-k' using the OLD right edge i, instead of using the NEW right edge after sliding (correct: (i+1)-k). Classic off-by-one — pretest, not recorded as a miss, but the exact gap this topic's mnemonic targets.", "high_confidence": false },
+        { "note": "On LC-643, first cut used integer division (curr_sum // k) instead of true division, truncating the average. Self-corrected to '/'. Also initialized max_avg = 0, which silently breaks on all-negative input (a valid LC-643 case) since 0 beats any real negative average. Self-corrected to float('-inf') immediately once asked. General lesson: any 'track the max' accumulator needs -inf as its floor, not 0, unless 0 is provably always achievable.", "high_confidence": false }
+      ],
+      "visual": [".dsa-tutor/visuals/fixed-size-window.html"],
+      "practice_done": ["LC-643", "LC-1343"],
+      "calibration": { "confident_right": 1, "confident_wrong": 0, "unsure_right": 0, "unsure_wrong": 0 },
+      "taught_back": "2026-08-19"
+    },
+    {
+      "name": "Variable-Size Window (Shrinkable)",
+      "mental_model": "The code skeleton IS the model: `state += arr[right]` runs every step, unconditionally; then `while is_valid(state):` alternates recording the current window and removing arr[left]. Record always comes before remove, because [left,right] is only still valid before that removal.",
+      "mnemonic": "A-R-R: Add (once, no condition) → while valid: Record, Remove, repeat. The while loop has no idea whether an answer is 'good' — it only stops when is_valid(state) turns False. That's the entire stopping rule.",
+      "mastery": "learning",
+      "last_reviewed": null,
+      "review_interval": 1,
+      "aces": 0,
+      "past_mistakes": [
+        { "note": "Pretest: first instinct was 'keep expanding since the condition (sum >= target) is satisfied,' missing that for a MINIMUM-length objective, expanding can only ever grow the window — shrinking while still valid is what searches for something smaller. Self-corrected on the follow-up question before any teaching happened.", "high_confidence": false }
+      ],
+      "visual": [".dsa-tutor/visuals/variable-window-shrink.html"],
+      "practice_done": [],
+      "calibration": { "confident_right": 0, "confident_wrong": 0, "unsure_right": 0, "unsure_wrong": 0 },
+      "taught_back": null
+    }
+  ],
+  "notes": "Learner wants proactive LeetCode recommendations at every practice step; goal stated as 'ace it' — bias toward thorough practice sets per concept. Practice files hold plain functions only, never LeetCode's 'class Solution' wrapper (they paste that format directly in chat, not into sliding_window.py). Topic 1 fully drilled: LC-3, LC-1695, LC-3090, LC-2401 all solved.",
+  "session_recap": ""
+}
