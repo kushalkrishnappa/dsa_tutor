@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>DFS Orders — one walk, three orders</title>
+<style>
+  body{margin:0;background:#15151f;color:#eee;font:15px/1.5 -apple-system,Segoe UI,Roboto,sans-serif}
+  .wrap{max-width:760px;margin:0 auto;padding:24px}
+  h1{font-size:20px;margin:0 0 4px}
+  .desc{color:#aaa;margin:0 0 16px}
+  #stage{background:#1d1d2a;border:1px solid #333;border-radius:10px}
+  svg{width:100%;height:auto;display:block}
+  .narration{min-height:24px;margin:12px 0;color:#cfcfe0}
+  .controls{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  button{background:#2b2b3a;color:#eee;border:1px solid #555;border-radius:6px;padding:6px 12px;cursor:pointer}
+  button:hover{border-color:#e0b341}
+  .counter{margin-left:auto;color:#888}
+  .quiz{margin-top:16px;background:#1d1d2a;border:1px solid #3a3a4a;border-radius:10px;padding:14px}
+  .quiz .q{font-weight:600;margin-bottom:8px}
+  .quiz button{margin:4px 6px 4px 0}
+  .reveal{margin-top:10px;color:#cfcfe0}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>DFS Orders — one walk, three orders</h1>
+  <p class="desc">The same depth-first walk. Gold = the node being recorded right now. Watch all three lists fill from a single traversal — the only difference is <em>which moment</em> in a node's frame records it.</p>
+  <div id="stage"><svg id="svg" viewBox="0 0 640 380"></svg></div>
+  <div class="narration" id="narration">—</div>
+  <div class="controls">
+    <button id="prev">◀ Prev</button>
+    <button id="play">▶ Play</button>
+    <button id="step">Step ▶|</button>
+    <button id="reset">⟲ Reset</button>
+    <label>Speed <input id="speed" type="range" min="300" max="1600" value="850"></label>
+    <span class="counter" id="counter"></span>
+  </div>
+  <div class="quiz" id="quiz" hidden>
+    <div class="q" id="qtext"></div>
+    <div id="qopts"></div>
+    <div class="reveal" id="reveal" hidden></div>
+  </div>
+</div>
+<script>
+/* ===== infrastructure: drawing helpers ===== */
+const SVG="http://www.w3.org/2000/svg";
+const svg=document.getElementById('svg');
+function el(t,a){const e=document.createElementNS(SVG,t);for(const k in a)e.setAttribute(k,a[k]);return e;}
+function clear(){while(svg.firstChild)svg.removeChild(svg.firstChild);}
+const COL={idle:'#2b2b3a',idleStroke:'#666',visited:'#3fb950',current:'#e0b341',curStroke:'#ffd75e',edge:'#7a7a8c',text:'#fff'};
+
+function drawGraph(g){
+  const pos={}; g.nodes.forEach(n=>pos[n.id]=n);
+  (g.edges||[]).forEach(([a,b])=>svg.appendChild(el('line',
+    {x1:pos[a].x,y1:pos[a].y,x2:pos[b].x,y2:pos[b].y,stroke:COL.edge,'stroke-width':2})));
+  g.nodes.forEach(n=>{
+    const v=g.visited&&g.visited.has(n.id), c=g.current===n.id;
+    svg.appendChild(el('circle',{cx:n.x,cy:n.y,r:19,
+      fill:c?COL.current:(v?COL.visited:COL.idle),
+      stroke:c?COL.curStroke:(v?COL.visited:COL.idleStroke),'stroke-width':2}));
+    const t=el('text',{x:n.x,y:n.y+5,'text-anchor':'middle',fill:COL.text,'font-size':13});
+    t.textContent=(n.label!=null?n.label:n.id); svg.appendChild(t);
+  });
+}
+
+/* ===== infrastructure: step engine ===== */
+const narration=document.getElementById('narration'),counter=document.getElementById('counter');
+const quiz=document.getElementById('quiz'),qtext=document.getElementById('qtext'),qopts=document.getElementById('qopts'),reveal=document.getElementById('reveal');
+const playBtn=document.getElementById('play'),speed=document.getElementById('speed');
+let STEPS=[],idx=0,timer=null;
+function render(){const s=STEPS[idx];clear();s.draw();narration.textContent=s.note||'';counter.textContent=(idx+1)+' / '+STEPS.length;
+  if(s.question)showQuestion(s.question);else quiz.hidden=true;}
+function showQuestion(q){quiz.hidden=false;qtext.textContent=q.prompt;reveal.hidden=true;qopts.innerHTML='';
+  q.options.forEach((o,i)=>{const b=document.createElement('button');b.textContent=o;
+    b.onclick=()=>{reveal.hidden=false;reveal.textContent=(i===q.answer?'✓ Correct. ':'✗ Not quite. ')+q.explain;};qopts.appendChild(b);});}
+function step(){if(idx<STEPS.length-1){idx++;render();}else pause();}
+function prev(){if(idx>0){idx--;render();}}
+function pause(){clearInterval(timer);timer=null;playBtn.textContent='▶ Play';}
+function play(){if(timer){pause();return;}playBtn.textContent='⏸ Pause';timer=setInterval(()=>{if(idx>=STEPS.length-1){pause();return;}step();},+speed.value);}
+function reset(){pause();idx=0;render();}
+document.getElementById('prev').onclick=prev;
+document.getElementById('step').onclick=()=>{pause();step();};
+document.getElementById('reset').onclick=reset;
+playBtn.onclick=play;
+
+/* ===== EDIT BELOW: define the lesson ===== */
+function buildSteps(){
+  const P={1:[320,40],2:[200,120],3:[450,120],4:[140,200],5:[270,200],6:[520,200]};
+  const NODES=Object.keys(P).map(id=>({id:+id,x:P[id][0],y:P[id][1],label:''+id}));
+  const E=[[1,2],[1,3],[2,4],[2,5],[3,6]];
+  const T={1:{l:2,r:3},2:{l:4,r:5},3:{l:null,r:6},4:{l:null,r:null},5:{l:null,r:null},6:{l:null,r:null}};
+
+  // simulate the Euler tour, emitting a record event per moment
+  const events=[];
+  (function visit(n){
+    if(n==null) return;
+    events.push({node:n,kind:'pre'});
+    visit(T[n].l);
+    events.push({node:n,kind:'in'});
+    visit(T[n].r);
+    events.push({node:n,kind:'post'});
+  })(1);
+
+  const KIND={pre:['Preorder','#e0b341'],in:['Inorder','#3fb950'],post:['Postorder','#14b8a6']};
+  function drawFrame(snap){
+    drawGraph({nodes:NODES,edges:E,visited:new Set(snap.pre),current:snap.cur});
+    const rows=[
+      ['Preorder   (Root, L, R)',snap.pre,'#e0b341'],
+      ['Inorder    (L, Root, R)',snap.ino,'#3fb950'],
+      ['Postorder  (L, R, Root)',snap.post,'#14b8a6']
+    ];
+    rows.forEach((r,i)=>{
+      const y=280+i*30, live=(KIND[snap.kind][0].toLowerCase().startsWith(r[0].split(' ')[0].toLowerCase()));
+      const t=el('text',{x:26,y,fill:r[2],'font-size':13,'font-family':'ui-monospace,Menlo,monospace','font-weight':live?'700':'400'});
+      t.textContent=(live?'▶ ':'  ')+r[0]+' :  '+r[1].join('  ');
+      svg.appendChild(t);
+    });
+  }
+
+  const pre=[],ino=[],post=[],steps=[];
+  events.forEach((ev,i)=>{
+    if(ev.kind==='pre')pre.push(ev.node);else if(ev.kind==='in')ino.push(ev.node);else post.push(ev.node);
+    const snap={pre:[...pre],ino:[...ino],post:[...post],cur:ev.node,kind:ev.kind};
+    const K=KIND[ev.kind][0];
+    let note;
+    if(ev.kind==='pre')note='Enter node '+ev.node+'. First touch → PREORDER records it now, before either child.';
+    else if(ev.kind==='in')note='Back at node '+ev.node+' between its children → INORDER records it now.';
+    else note='Both children of '+ev.node+' have returned → POSTORDER records it now, on the way out.';
+    let question=null;
+    if(ev.kind==='pre'&&ev.node===4)
+      question={prompt:"Preorder so far is 1 2 4. Node 4 is a leaf. Which node will preorder record NEXT?",
+        options:["3","5","2"],answer:1,
+        explain:"Node 4 returns to its parent 2, which then goes RIGHT to node 5. Preorder records on first touch, so 5 is next → 1 2 4 5..."};
+    if(ev.kind==='post'&&ev.node===2)
+      question={prompt:"Postorder just recorded 4, 5, then 2. Why does 2 come AFTER both 4 and 5?",
+        options:["Postorder is right-to-left","A node's post-moment waits until both children have fully returned","It's alphabetical"],answer:1,
+        explain:"Postorder records a node only after BOTH its subtrees are done. That's exactly why it matches the recursion contract — a node's answer needs its children's answers first."};
+    steps.push({draw:()=>drawFrame(snap),note,question});
+  });
+  steps.push({draw:()=>{
+    drawFrame({pre,ino,post,cur:null,kind:'post'});
+  },note:"Done. One walk, three orders. Notice: root 1 is FIRST in preorder and LAST in postorder."});
+  return steps;
+}
+STEPS=buildSteps();render();
+</script>
+</body>
+</html>

@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="utf-8"><title>Trees roadmap</title>
+<style>body{margin:0;background:#15151f;color:#eee;font:15px/1.5 -apple-system,Segoe UI,Roboto,sans-serif}
+.wrap{max-width:1140px;margin:0 auto;padding:20px}h1{font-size:20px}.legend{color:#bbb;font-size:13px}
+svg{width:100%;height:auto}</style></head>
+<body><div class="wrap">
+<h1>Trees — learning roadmap (4-day sprint)</h1>
+<p class="legend">✓ Green = done · Gold = current · Amber ◐ = started, unfinished · Solid → prerequisite · Dashed ⇢ next phase · Dashed box = stretch &nbsp;|&nbsp; updated 2026-08-15</p>
+<svg id="map" viewBox="0 0 1120 920"></svg>
+</div>
+<script>
+const NS="http://www.w3.org/2000/svg",svg=document.getElementById('map'),W=200,H=54;
+// reserved for status — no tier may reuse these: current(gold) done(green) inprog(amber)
+const C={current:'#e0b341',done:'#2ea043',inprog:'#f59e0b',
+         found:'#3b82f6',core:'#3fb950',app:'#14b8a6',struct:'#ec4899',sp:'#a855f7',adv:'#9ca3af'};
+const B={
+  anat:  {x:460,y:20, phase:'done',   label:'✓ Tree Anatomy',       sub:'root · leaf · height vs depth'},
+  repr:  {x:460,y:100,phase:'done',   label:'✓ Representations',    sub:'Node class · array form · children[]'},
+  rec:   {x:240,y:180,phase:'done',   label:'✓ Recursion Contract', sub:'what ONE frame returns'},
+  bfs:   {x:680,y:180,phase:'done',   label:'✓ Level-Order (BFS)',  sub:'queue · one level per loop'},
+  dfs:   {x:240,y:260,phase:'done',   label:'✓ DFS Orders',         sub:'pre · in · post'},
+  iter:  {x:680,y:260,phase:'done',   label:'✓ Iterative Traversal', sub:'explicit stack · no recursion'},
+
+  bu:    {x:130,y:340,phase:'done',   label:'✓ Bottom-Up Aggregate', sub:'diameter · balanced height'},
+  td:    {x:460,y:340,phase:'done',   label:'✓ Top-Down Accumulate',  sub:'root-to-leaf paths · sums'},
+  cmp:   {x:790,y:340,phase:'done',   label:'✓ Structural Compare', sub:'same · symmetric · subtree'},
+  lca:   {x:460,y:420,phase:'current',label:'▶ Lowest Common Ancestor',sub:'YOU ARE HERE · the fork-point return'},
+
+  bstinv:{x:240,y:500,phase:'struct', label:'BST Invariant',        sub:'search · insert · delete'},
+  bstin: {x:680,y:500,phase:'struct', label:'Inorder = Sorted',     sub:'validate with min/max bounds'},
+  bstq:  {x:460,y:580,phase:'struct', label:'BST Queries',          sub:'kth · successor · range'},
+
+  cons:  {x:240,y:660,phase:'sp',     label:'Construct from Orders',sub:'pre+in · sorted → balanced'},
+  ser:   {x:680,y:660,phase:'sp',     label:'Serialize / Deserialize',sub:'null markers · round-trip'},
+  drill: {x:460,y:740,phase:'sp',     label:'Views & Mixed Drill',  sub:'right-side · vertical · timed set'},
+
+  trie:  {x:60, y:830,phase:'adv',    label:'Tries',                sub:'prefix trees'},
+  morris:{x:290,y:830,phase:'adv',    label:'Morris Traversal',     sub:'O(1) space threading'},
+  avl:   {x:520,y:830,phase:'adv',    label:'AVL / Red-Black',      sub:'rotations · self-balancing'},
+  seg:   {x:750,y:830,phase:'adv',    label:'Segment / Fenwick',    sub:'range queries'}
+};
+const L=[
+  ['anat','repr','p'],['repr','rec','p'],['repr','bfs','p'],
+  ['rec','dfs','p'],['dfs','iter','p'],
+  ['dfs','bu','n'],['dfs','td','n'],['bfs','cmp','n'],
+  ['bu','lca','p'],['td','lca','p'],['cmp','lca','p'],
+  ['lca','bstinv','n'],['lca','bstin','n'],
+  ['bstinv','bstq','p'],['bstin','bstq','p'],
+  ['bstq','cons','n'],['bstq','ser','n'],
+  ['cons','drill','p'],['ser','drill','p'],
+  ['drill','trie','n'],['drill','morris','n'],['drill','avl','n'],['drill','seg','n']
+];
+const labels=[
+  ['DAY 1 — FOUNDATIONS & TRAVERSAL','found',170],
+  ['DAY 2 — RECURSIVE PATTERNS','app',420],
+  ['DAY 3 — BST','struct',555],
+  ['DAY 4 — BUILD & DRILL','sp',715],
+  ['STRETCH','adv',857]
+];
+
+const defs=document.createElementNS(NS,'defs');
+defs.innerHTML='<marker id="as" markerWidth="9" markerHeight="9" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="#8b8b9e"/></marker>'+
+'<marker id="an" markerWidth="9" markerHeight="9" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="#a7adc4"/></marker>';
+svg.appendChild(defs);
+function geo(n){return {cx:n.x+W/2,cy:n.y+H/2,top:n.y,bottom:n.y+H,left:n.x,right:n.x+W};}
+function pathFor(s,t){const a=geo(s),b=geo(t);
+  if(Math.abs(s.y-t.y)<1)return t.x>s.x?`M${a.right} ${a.cy} H${b.left}`:`M${a.left} ${a.cy} H${b.right}`;
+  const my=(a.bottom+b.top)/2;return `M${a.cx} ${a.bottom} V${my} H${b.cx} V${b.top}`;}
+L.forEach(([s,t,ty])=>{const p=document.createElementNS(NS,'path');p.setAttribute('d',pathFor(B[s],B[t]));
+  p.setAttribute('fill','none');p.setAttribute('stroke',ty==='n'?'#a7adc4':'#8b8b9e');
+  p.setAttribute('stroke-width',ty==='n'?'1.6':'2');if(ty==='n')p.setAttribute('stroke-dasharray','6,5');
+  p.setAttribute('marker-end',ty==='n'?'url(#an)':'url(#as)');svg.appendChild(p);});
+labels.forEach(([txt,ph,cy])=>{const t=document.createElementNS(NS,'text');t.setAttribute('x',26);t.setAttribute('y',cy);
+  t.setAttribute('fill',C[ph]);t.setAttribute('font-size','11');t.setAttribute('font-weight','700');
+  t.setAttribute('letter-spacing','1.5');t.setAttribute('text-anchor','middle');
+  t.setAttribute('transform',`rotate(-90,26,${cy})`);t.textContent=txt;svg.appendChild(t);});
+Object.values(B).forEach(n=>{const col=C[n.phase],cur=n.phase==='current',adv=n.phase==='adv';
+  const r=document.createElementNS(NS,'rect');r.setAttribute('x',n.x);r.setAttribute('y',n.y);
+  r.setAttribute('width',W);r.setAttribute('height',H);r.setAttribute('rx','9');
+  r.setAttribute('fill',cur?'rgba(224,179,65,0.16)':(n.phase==='inprog'?'rgba(245,158,11,0.10)':'rgba(38,38,52,0.92)'));
+  r.setAttribute('stroke',col);r.setAttribute('stroke-width',cur?'3':'2');
+  if(adv)r.setAttribute('stroke-dasharray','6,4');svg.appendChild(r);
+  const t1=document.createElementNS(NS,'text');t1.setAttribute('x',n.x+14);t1.setAttribute('y',n.y+23);
+  t1.setAttribute('fill','#fff');t1.setAttribute('font-size','14');t1.setAttribute('font-weight','700');t1.textContent=n.label;svg.appendChild(t1);
+  const t2=document.createElementNS(NS,'text');t2.setAttribute('x',n.x+14);t2.setAttribute('y',n.y+41);
+  t2.setAttribute('fill','#b8b8c8');t2.setAttribute('font-size','10.5');t2.textContent=n.sub;svg.appendChild(t2);});
+</script>
+</body>
+</html>

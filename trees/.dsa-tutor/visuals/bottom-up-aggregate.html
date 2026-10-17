@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Bottom-Up Aggregate: Diameter of a Binary Tree</title>
+<style>
+  body{margin:0;background:#15151f;color:#eee;font:15px/1.5 -apple-system,Segoe UI,Roboto,sans-serif}
+  .wrap{max-width:760px;margin:0 auto;padding:24px}
+  h1{font-size:20px;margin:0 0 4px}
+  .desc{color:#aaa;margin:0 0 16px}
+  #stage{background:#1d1d2a;border:1px solid #333;border-radius:10px}
+  svg{width:100%;height:auto;display:block}
+  .narration{min-height:24px;margin:12px 0;color:#cfcfe0}
+  .controls{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  button{background:#2b2b3a;color:#eee;border:1px solid #555;border-radius:6px;padding:6px 12px;cursor:pointer}
+  button:hover{border-color:#e0b341}
+  .counter{margin-left:auto;color:#888}
+  .quiz{margin-top:16px;background:#1d1d2a;border:1px solid #3a3a4a;border-radius:10px;padding:14px}
+  .quiz .q{font-weight:600;margin-bottom:8px}
+  .quiz button{margin:4px 6px 4px 0}
+  .reveal{margin-top:10px;color:#cfcfe0}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Bottom-Up Aggregate: Diameter of a Binary Tree</h1>
+  <p class="desc">One value returns UP to the parent (height). A different value gets posted ASIDE to a global max (diameter-through-this-node) — and the parent never sees that second value.</p>
+  <div id="stage"><svg id="svg" viewBox="0 0 640 360"></svg></div>
+  <div class="narration" id="narration">—</div>
+  <div class="controls">
+    <button id="prev">◀ Prev</button>
+    <button id="play">▶ Play</button>
+    <button id="step">Step ▶|</button>
+    <button id="reset">⟲ Reset</button>
+    <label>Speed <input id="speed" type="range" min="300" max="1600" value="850"></label>
+    <span class="counter" id="counter"></span>
+  </div>
+  <div class="quiz" id="quiz" hidden>
+    <div class="q" id="qtext"></div>
+    <div id="qopts"></div>
+    <div class="reveal" id="reveal" hidden></div>
+  </div>
+</div>
+<script>
+/* ===== infrastructure: drawing helpers ===== */
+const SVG="http://www.w3.org/2000/svg";
+const svg=document.getElementById('svg');
+function el(t,a){const e=document.createElementNS(SVG,t);for(const k in a)e.setAttribute(k,a[k]);return e;}
+function clear(){while(svg.firstChild)svg.removeChild(svg.firstChild);}
+const COL={idle:'#2b2b3a',idleStroke:'#666',visited:'#3fb950',current:'#e0b341',curStroke:'#ffd75e',edge:'#7a7a8c',text:'#fff'};
+
+function drawGraph(g){
+  clear(); const pos={}; g.nodes.forEach(n=>pos[n.id]=n);
+  (g.edges||[]).forEach(([a,b])=>svg.appendChild(el('line',
+    {x1:pos[a].x,y1:pos[a].y,x2:pos[b].x,y2:pos[b].y,stroke:COL.edge,'stroke-width':2})));
+  g.nodes.forEach(n=>{
+    const v=g.visited&&g.visited.has(n.id), c=g.current===n.id;
+    svg.appendChild(el('circle',{cx:n.x,cy:n.y,r:26,
+      fill:c?COL.current:(v?COL.visited:COL.idle),
+      stroke:c?COL.curStroke:(v?COL.visited:COL.idleStroke),'stroke-width':2}));
+    const t=el('text',{x:n.x,y:n.y+5,'text-anchor':'middle',fill:COL.text,'font-size':13});
+    t.textContent=(n.label!=null?n.label:n.id); svg.appendChild(t);
+  });
+}
+
+/* ===== infrastructure: step engine + questions (do not edit) ===== */
+const narration=document.getElementById('narration'),counter=document.getElementById('counter');
+const quiz=document.getElementById('quiz'),qtext=document.getElementById('qtext'),qopts=document.getElementById('qopts'),reveal=document.getElementById('reveal');
+const playBtn=document.getElementById('play'),speed=document.getElementById('speed');
+let STEPS=[],idx=0,timer=null;
+function render(){const s=STEPS[idx];s.draw();narration.textContent=s.note||'';counter.textContent=(idx+1)+' / '+STEPS.length;
+  if(s.question)showQuestion(s.question);else quiz.hidden=true;}
+function showQuestion(q){quiz.hidden=false;qtext.textContent=q.prompt;reveal.hidden=true;qopts.innerHTML='';
+  q.options.forEach((o,i)=>{const b=document.createElement('button');b.textContent=o;
+    b.onclick=()=>{reveal.hidden=false;reveal.textContent=(i===q.answer?'✓ Correct. ':'✗ Not quite. ')+q.explain;};qopts.appendChild(b);});}
+function step(){if(idx<STEPS.length-1){idx++;render();}else pause();}
+function prev(){if(idx>0){idx--;render();}}
+function pause(){clearInterval(timer);timer=null;playBtn.textContent='▶ Play';}
+function play(){if(timer){pause();return;}playBtn.textContent='⏸ Pause';timer=setInterval(()=>{if(idx>=STEPS.length-1){pause();return;}step();},+speed.value);}
+function reset(){pause();idx=0;render();}
+document.getElementById('prev').onclick=prev;
+document.getElementById('step').onclick=()=>{pause();step();};
+document.getElementById('reset').onclick=reset;
+playBtn.onclick=play;
+
+/* ===== EDIT BELOW: define the lesson ===== */
+function buildSteps(){
+  const POS={1:{x:320,y:50},2:{x:190,y:160},3:{x:450,y:160},4:{x:110,y:270},5:{x:270,y:270}};
+  const EDGES=[[1,2],[1,3],[2,4],[2,5]];
+  function nodes(info){
+    return Object.keys(POS).map(k=>{const id=+k,p=POS[id];
+      return {id,x:p.x,y:p.y,label:info[id]?(id+"\n"+info[id]):String(id)};});
+  }
+  // (SVG text has no newline, so fold info into a single short line instead)
+  function nodesFlat(info){
+    return Object.keys(POS).map(k=>{const id=+k,p=POS[id];
+      return {id,x:p.x,y:p.y,label:info[id]?(id+" "+info[id]):String(id)};});
+  }
+  const steps=[];
+  let info={};
+  function push(current,visited,note,question){
+    steps.push({draw:()=>drawGraph({nodes:nodesFlat(info),edges:EDGES,visited:new Set(visited),current}),note,question});
+  }
+
+  push(4,[],"Recurse all the way down to node 4 (a leaf). Its left and right are both None -- height(None) = -1 by convention.");
+  info={4:"h=0"};
+  push(4,[4],"Node 4 computes: height = max(-1,-1)+1 = 0. diam_at_4 = (-1)+(-1)+2 = 0. Global max diameter so far: 0.");
+  push(5,[4],"Back up one level, over to node 5 -- the other leaf.");
+  info={...info,5:"h=0"};
+  push(5,[4,5],"Node 5: height=0, diam_at_5=0. Global max is still 0.");
+  push(2,[4,5],"Node 2 now has both children's heights in hand (0 and 0) -- it TRUSTS them, no re-deriving.");
+  info={...info,2:"h=1"};
+  push(2,[4,5,2],
+    "Node 2: height = max(0,0)+1 = 1 -- THAT is what node 1 will receive. But diam_at_2 = left_h(0)+right_h(0)+2 = 2. Global max updates: 0 -> 2.",
+    {prompt:"That diam_at_2 = 2 just got computed. Where does it go?",
+     options:["Returned up to node 1, added into node 1's own height math","Maxed into a separate global variable -- node 1 never sees this number","Discarded, since only the root's diameter matters"],
+     answer:1,
+     explain:"height (1) is the only thing that travels up the call stack. diam_at_2 (2) is a side quantity -- compared against a running global max and then forgotten by the recursion."});
+  push(3,[4,5,2],"Over to node 3, the last leaf.");
+  info={...info,3:"h=0"};
+  push(3,[4,5,2,3],"Node 3: height=0, diam_at_3=0. Global max still 2.");
+  push(1,[4,5,2,3],"Back to the root. It only ever sees height(2)=1 and height(3)=0 -- it never sees diam_at_2=2 directly; that was already banked earlier.");
+  info={...info,1:"h=2"};
+  push(1,[4,5,2,3,1],
+    "Node 1: height = max(1,0)+1 = 2. diam_at_1 = 1+0+2 = 3. Global max updates: 2 -> 3.",
+    {prompt:"The longest path (3 edges) happens to pass through the root here. Is that guaranteed for every tree?",
+     options:["Yes -- the diameter always passes through the root","No -- the longest path can live entirely inside one subtree and never touch the root"],
+     answer:1,
+     explain:"That's exactly why you take a MAX over every node's diam_at_node, not just the root's -- the winning path might be fully contained in a subtree, as you guessed earlier."});
+  push(null,[1,2,3,4,5],"Final answer = max(diam_at_node) across every node visited = 3 (path 4-2-1-3). It did not come from one 'winning' return value -- it came from comparing a side quantity, banked at every single node.");
+  return steps;
+}
+STEPS=buildSteps();render();
+</script>
+</body>
+</html>
