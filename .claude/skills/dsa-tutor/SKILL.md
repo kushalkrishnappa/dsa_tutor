@@ -42,6 +42,10 @@ uploads anything.**
 
 This is the point of the layout — studying DP must leave `graphs/.dsa-tutor/` untouched.
 
+> **Folder rules.** If the active folder's `.dsa-tutor/bank_rules.md` exists, read it at session
+> start and follow it. It may grant read access to additional files in the active folder (e.g.
+> `_keys/`); such grants never extend outside that folder.
+
 ## Detecting the active folder
 
 First match wins:
