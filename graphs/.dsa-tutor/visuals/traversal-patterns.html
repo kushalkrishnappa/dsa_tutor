@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>BFS/DFS Patterns — One Engine, Two Knobs</title>
+<style>
+  body{margin:0;background:#15151f;color:#eee;font:15px/1.55 -apple-system,Segoe UI,Roboto,sans-serif}
+  .wrap{max-width:900px;margin:0 auto;padding:24px}
+  h1{font-size:21px;margin:0 0 4px}
+  h2{font-size:16px;margin:26px 0 10px;color:#e0b341}
+  .desc{color:#aaa;margin:0 0 14px}
+  table{border-collapse:collapse;width:100%;margin:10px 0;font-size:13.5px}
+  th,td{border:1px solid #3a3a4a;padding:8px 10px;text-align:left;vertical-align:top}
+  th{background:#23232f;color:#cfcfe0}
+  td code{color:#7ee787}
+  .knob{color:#e0b341;font-weight:600}
+  .panel{background:#1d1d2a;border:1px solid #333;border-radius:10px;padding:16px;margin-top:8px}
+  .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:6px 0}
+  .row .lbl{color:#888;width:90px;font-size:13px}
+  button{background:#2b2b3a;color:#eee;border:1px solid #555;border-radius:6px;padding:6px 13px;cursor:pointer;font-size:13px}
+  button:hover{border-color:#e0b341}
+  button.on{background:#e0b341;color:#1a1a1a;border-color:#e0b341;font-weight:600}
+  pre{background:#121219;border:1px solid #2b2b3a;border-radius:8px;padding:14px;overflow:auto;margin:10px 0 0;
+      font:13px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace;color:#d7d7e6;white-space:pre}
+  .meta{margin-top:10px;font-size:13px;color:#bcbcd0}
+  .meta b{color:#7ee787}
+  .quiz{background:#1d1d2a;border:1px solid #3a3a4a;border-radius:10px;padding:14px;margin-top:12px}
+  .quiz .q{font-weight:600;margin-bottom:6px}
+  .quiz .opts button{margin:4px 6px 4px 0}
+  .reveal{margin-top:8px;color:#cfcfe0;font-size:13.5px}
+  .tag{display:inline-block;background:#23232f;border:1px solid #3a3a4a;border-radius:5px;padding:1px 7px;margin-right:6px;font-size:12px;color:#9fd}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>BFS / DFS Patterns — one engine, two knobs</h1>
+  <p class="desc">Trees, graphs, and grids are the <em>same</em> traversal. Only two things change: <span class="knob">what counts as a neighbor</span>, and <span class="knob">whether you need a visited set</span>.</p>
+
+  <table>
+    <tr><th>Knob</th><th>🌳 Tree</th><th>🕸️ Graph</th><th>▦ Grid / Matrix</th></tr>
+    <tr><td class="knob">Neighbors</td><td><code>node.left, node.right</code></td><td><code>adj[node]</code></td><td>4 cells: <code>(r±1,c),(r,c±1)</code></td></tr>
+    <tr><td class="knob">Need visited?</td><td>No — no cycles</td><td>Yes — cycles</td><td>Yes — mark in-place</td></tr>
+    <tr><td class="knob">BFS gives</td><td>level order</td><td>shortest hops</td><td>shortest path / multi-source spread</td></tr>
+    <tr><td class="knob">DFS gives</td><td>pre/in/post order, paths</td><td>components, cycles, topo-sort</td><td>flood fill, island count, area</td></tr>
+  </table>
+
+  <h2>Pick a combo → see the template</h2>
+  <div class="panel">
+    <div class="row"><span class="lbl">Structure</span>
+      <button class="struct on" data-s="tree">🌳 Tree</button>
+      <button class="struct" data-s="graph">🕸️ Graph</button>
+      <button class="struct" data-s="grid">▦ Grid</button>
+    </div>
+    <div class="row"><span class="lbl">Traversal</span>
+      <button class="trav on" data-t="bfs">BFS (queue)</button>
+      <button class="trav" data-t="dfs">DFS (stack/recursion)</button>
+    </div>
+    <pre id="code">—</pre>
+    <div class="meta" id="meta"></div>
+  </div>
+
+  <h2>Which traversal? — the decision tell</h2>
+  <div class="panel" style="font-size:13.5px">
+    <span class="tag">BFS</span> "shortest / fewest steps / minimum moves" in an <b>unweighted</b> world, or "process level by level". Spreads in rings.<br>
+    <span class="tag">DFS</span> "does a path exist", "explore/enumerate all paths", "count connected groups", "detect a cycle", "topological order", anything recursive on a tree. Dives deep.
+  </div>
+
+  <h2>Spot the pattern (predict, then reveal)</h2>
+  <div id="quizzes"></div>
+</div>
+
+<script>
+/* ---- templates: [structure][traversal] = {code, meta} ---- */
+const T = {
+  tree: {
+    bfs: {code:
+`from collections import deque
+
+def level_order(root):
+    if not root: return []
+    q, levels = deque([root]), []
+    while q:
+        level = []
+        for _ in range(len(q)):        # snapshot THIS level's size
+            node = q.popleft()
+            level.append(node.val)
+            if node.left:  q.append(node.left)
+            if node.right: q.append(node.right)
+        levels.append(level)
+    return levels`,
+      meta:`Neighbors = <b>children</b>. <b>No visited set</b> (a tree has no cycles). The <b>for _ in range(len(q))</b> trick freezes one level so you can group nodes by depth.`},
+    dfs: {code:
+`def dfs(node):
+    if not node: return
+    # PREORDER : process(node) here
+    dfs(node.left)
+    # INORDER  : process(node) here
+    dfs(node.right)
+    # POSTORDER: process(node) here`,
+      meta:`Neighbors = <b>children</b>. <b>No visited set</b>. Where you "process" the node decides pre / in / post order. Path & subtree problems live here.`}
+  },
+  graph: {
+    bfs: {code:
+`from collections import deque
+
+def bfs(start):
+    q = deque([start])
+    visited = {start}              # mark on ENQUEUE
+    while q:
+        node = q.popleft()
+        for nbr in adj[node]:
+            if nbr not in visited:
+                visited.add(nbr)   # mark + enqueue together
+                q.append(nbr)`,
+      meta:`Neighbors = <b>adj[node]</b>. <b>Need visited</b> (cycles!). Mark on enqueue so each node enters the queue exactly once. Add a dist[] to get shortest hops.`},
+    dfs: {code:
+`def dfs(node, visited):
+    visited.add(node)
+    for nbr in adj[node]:
+        if nbr not in visited:
+            dfs(nbr, visited)
+
+# iterative (no recursion-depth limit):
+def dfs_iter(start):
+    stack, visited = [start], set()
+    while stack:
+        node = stack.pop()
+        if node in visited: continue
+        visited.add(node)
+        for nbr in adj[node]:
+            if nbr not in visited:
+                stack.append(nbr)`,
+      meta:`Neighbors = <b>adj[node]</b>. <b>Need visited</b>. Recursive rides the call stack (dies past ~1000 deep); iterative uses an explicit stack and survives huge graphs.`}
+  },
+  grid: {
+    bfs: {code:
+`from collections import deque
+DIRS = [(1,0),(-1,0),(0,1),(0,-1)]
+
+def bfs(grid, sources):            # sources = list of (r,c)
+    rows, cols = len(grid), len(grid[0])
+    q = deque(sources)
+    for r,c in sources: grid[r][c] = 2   # mark visited
+    while q:
+        r, c = q.popleft()
+        for dr, dc in DIRS:
+            nr, nc = r+dr, c+dc
+            if 0 <= nr < rows and 0 <= nc < cols and grid[nr][nc] == 1:
+                grid[nr][nc] = 2          # mark before enqueue
+                q.append((nr, nc))`,
+      meta:`Neighbors = <b>the 4 directions</b> + a <b>bounds check</b>. The grid IS an implicit graph. Seed the queue with MANY sources for multi-source BFS (rotting oranges, 0/1-matrix).`},
+    dfs: {code:
+`DIRS = [(1,0),(-1,0),(0,1),(0,-1)]
+
+def dfs(grid, r, c):
+    rows, cols = len(grid), len(grid[0])
+    if not (0 <= r < rows and 0 <= c < cols): return   # off-grid
+    if grid[r][c] != 1: return                         # wall or seen
+    grid[r][c] = 0                                     # mark in-place
+    for dr, dc in DIRS:
+        dfs(grid, r+dr, c+dc)`,
+      meta:`Neighbors = <b>the 4 directions</b> + <b>bounds check</b>. Flipping the cell value IS the visited set (no separate structure). This is Number of Islands / flood fill.`}
+  }
+};
+
+let S='tree', V='bfs';
+const codeEl=document.getElementById('code'), metaEl=document.getElementById('meta');
+function refresh(){
+  codeEl.textContent = T[S][V].code;
+  metaEl.innerHTML = T[S][V].meta;
+  document.querySelectorAll('.struct').forEach(b=>b.classList.toggle('on', b.dataset.s===S));
+  document.querySelectorAll('.trav').forEach(b=>b.classList.toggle('on', b.dataset.t===V));
+}
+document.querySelectorAll('.struct').forEach(b=>b.onclick=()=>{S=b.dataset.s;refresh();});
+document.querySelectorAll('.trav').forEach(b=>b.onclick=()=>{V=b.dataset.t;refresh();});
+refresh();
+
+/* ---- pattern-recognition quiz cards ---- */
+const Q=[
+ {q:"\"Fewest moves for a knight to reach a target square on a chessboard.\"",
+  opts:["Grid + DFS","Grid (knight-move neighbors) + BFS","Tree + BFS"],ans:1,
+  ex:"\"Fewest moves\" = shortest path in an unweighted implicit graph → BFS. Neighbors are the 8 knight jumps; you still need visited."},
+ {q:"\"Count the number of separate islands of 1's in a binary matrix.\"",
+  opts:["Grid + DFS/BFS flood-fill (connected components)","Tree + DFS","Graph + BFS shortest path"],ans:0,
+  ex:"Connected components on a grid: loop every cell, and each unvisited '1' kicks off a flood-fill that sinks its whole island. Count the kick-offs."},
+ {q:"\"Return every root-to-leaf path in a binary tree.\"",
+  opts:["Tree + BFS levels","Tree + DFS (no visited)","Graph + DFS (with visited)"],ans:1,
+  ex:"Enumerating paths = DFS. It's a TREE, so no visited set — you can only arrive from the parent. Build the path on the way down, pop on the way back up."},
+ {q:"\"Detect whether an UNDIRECTED graph contains a cycle.\"",
+  opts:["Graph + BFS shortest path","Graph + DFS, visited + remember the parent","Grid + DFS"],ans:1,
+  ex:"DFS with a visited set; a back-edge to an already-visited node that ISN'T the one you came from = cycle. (Need to track the parent to ignore the edge you arrived on.)"}
+];
+const box=document.getElementById('quizzes');
+Q.forEach((item,i)=>{
+  const d=document.createElement('div');d.className='quiz';
+  const q=document.createElement('div');q.className='q';q.textContent=(i+1)+'. '+item.q;d.appendChild(q);
+  const opts=document.createElement('div');opts.className='opts';
+  const rev=document.createElement('div');rev.className='reveal';rev.hidden=true;
+  item.opts.forEach((o,j)=>{const b=document.createElement('button');b.textContent=o;
+    b.onclick=()=>{rev.hidden=false;rev.innerHTML=(j===item.ans?'✓ ':'✗ ')+item.ex;};opts.appendChild(b);});
+  d.appendChild(opts);d.appendChild(rev);box.appendChild(d);
+});
+</script>
+</body>
+</html>

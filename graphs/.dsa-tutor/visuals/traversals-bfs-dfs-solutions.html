@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Traversals: BFS &amp; DFS — 15 Visual Solutions</title>
+<style>
+  body{margin:0;background:#15151f;color:#eee;font:15px/1.5 -apple-system,Segoe UI,Roboto,sans-serif}
+  .wrap{max-width:820px;margin:0 auto;padding:22px}
+  h1{font-size:20px;margin:0 0 2px}
+  .sub{color:#aaa;margin:0 0 14px;font-size:13px}
+  .dots{display:flex;gap:6px;flex-wrap:wrap;margin:0 0 14px}
+  .dot{width:26px;height:26px;border-radius:6px;border:1px solid #444;background:#20202e;color:#9a9ab0;
+       font-size:12px;cursor:pointer;display:flex;align-items:center;justify-content:center}
+  .dot.active{border-color:#e0b341;color:#e0b341;background:rgba(224,179,65,.12)}
+  .dot.done{color:#3fb950;border-color:#2e7d46}
+  .card{background:#1d1d2a;border:1px solid #333;border-radius:12px;padding:18px}
+  .tag{display:inline-block;font-size:11px;letter-spacing:.6px;text-transform:uppercase;
+       color:#9aa4c4;background:#23233a;border:1px solid #34344c;border-radius:20px;padding:3px 10px;margin-bottom:10px}
+  .flag{display:inline-block;font-size:11px;color:#f0b36b;background:rgba(245,158,11,.12);
+        border:1px solid #6b4a12;border-radius:20px;padding:3px 10px;margin:0 0 10px 8px}
+  .qn{color:#e0b341;font-weight:700;font-size:13px;margin-bottom:4px}
+  .qt{font-size:16px;font-weight:600;margin:0 0 12px;color:#f2f2f7}
+  .qt code,.sol code{background:#12121a;border:1px solid #333;border-radius:4px;padding:1px 5px;font-size:13px;color:#ffd98a}
+  #figwrap{background:#15151f;border:1px solid #2a2a3a;border-radius:10px;padding:6px}
+  svg{width:100%;height:auto;display:block}
+  .sol{margin-top:14px;padding:14px;background:#191924;border:1px solid #2f2f42;border-radius:10px;color:#d6d6e6}
+  .sol p{margin:0 0 8px}
+  .sol .key{color:#3fb950;font-weight:600}
+  .sol .bad{color:#f85149;font-weight:600}
+  .sol pre{background:#101018;border:1px solid #2a2a3a;border-radius:8px;padding:10px;overflow:auto;margin:8px 0}
+  .sol pre code{background:none;border:none;padding:0;color:#cfe0ff;font-size:12.5px;line-height:1.5}
+  .controls{display:flex;gap:8px;align-items:center;margin-top:14px}
+  button{background:#2b2b3a;color:#eee;border:1px solid #555;border-radius:8px;padding:8px 14px;cursor:pointer;font-size:14px}
+  button:hover{border-color:#e0b341}
+  #show{margin-left:auto;background:#243a24;border-color:#2e7d46;color:#c8f5cf}
+  #show:hover{border-color:#3fb950}
+  .hint{color:#777;font-size:12px;text-align:center;margin-top:10px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Traversals: BFS &amp; DFS</h1>
+  <p class="sub">15 visual solutions · try the diagram first, then reveal · ⚑ = one of your recurring slips</p>
+  <div class="dots" id="dots"></div>
+  <div class="card">
+    <div id="tags"></div>
+    <div class="qn" id="qn"></div>
+    <div class="qt" id="qt"></div>
+    <div id="figwrap"><svg id="fig" viewBox="0 0 720 340"></svg></div>
+    <div class="sol" id="sol" hidden></div>
+    <div class="controls">
+      <button id="prev">◀ Prev</button>
+      <button id="next">Next ▶</button>
+      <button id="show">Show solution</button>
+    </div>
+    <div class="hint">← / → to navigate · Space to reveal</div>
+  </div>
+</div>
+<script>
+const NS="http://www.w3.org/2000/svg";
+const svg=document.getElementById('fig');
+function E(t,a){const e=document.createElementNS(NS,t);for(const k in a)e.setAttribute(k,a[k]);return e;}
+function add(s,t,a){const e=E(t,a);s.appendChild(e);return e;}
+function txt(s,x,y,str,a){a=a||{};const o=Object.assign({x:x,y:y,'text-anchor':'middle','dominant-baseline':'middle',fill:'#fff','font-size':14,'font-family':'-apple-system,Segoe UI,Roboto,sans-serif'},a);const e=add(s,'text',o);e.textContent=str;return e;}
+function defs(s){
+  const d=add(s,'defs',{});
+  const mk=(id,col)=>{const m=E('marker',{id:id,markerWidth:12,markerHeight:12,refX:9,refY:3,orient:'auto',markerUnits:'userSpaceOnUse'});m.appendChild(E('path',{d:'M0,0 L9,3 L0,6 Z',fill:col}));d.appendChild(m);};
+  mk('ah','#e0b341');mk('ahg','#3fb950');mk('ahr','#f85149');mk('ahw','#7a7a8c');
+}
+function node(s,x,y,label,o){o=o||{};add(s,'circle',{cx:x,cy:y,r:o.r||22,fill:o.fill||'#2b2b3a',stroke:o.stroke||'#666','stroke-width':o.sw||2});txt(s,x,y,label,{fill:o.tc||'#fff','font-size':o.fs||14,'font-weight':o.fw||400});}
+function line(s,x1,y1,x2,y2,o){o=o||{};const a={x1:x1,y1:y1,x2:x2,y2:y2,stroke:o.stroke||'#7a7a8c','stroke-width':o.sw||2};if(o.dash)a['stroke-dasharray']=o.dash;if(o.marker)a['marker-end']=o.marker;add(s,'line',a);}
+function seg(x1,y1,x2,y2,r1,r2){const dx=x2-x1,dy=y2-y1,L=Math.hypot(dx,dy)||1,ux=dx/L,uy=dy/L;return[x1+ux*(r1||0),y1+uy*(r1||0),x2-ux*(r2||0),y2-uy*(r2||0)];}
+function arrow(s,x1,y1,x2,y2,o){o=o||{};const p=seg(x1,y1,x2,y2,o.r1||0,o.r2||22);const mk=o.color==='r'?'url(#ahr)':o.color==='g'?'url(#ahg)':o.color==='w'?'url(#ahw)':'url(#ah)';const st=o.color==='r'?'#f85149':o.color==='g'?'#3fb950':o.color==='w'?'#7a7a8c':'#e0b341';line(s,p[0],p[1],p[2],p[3],{stroke:st,'sw':o.sw||2.4,marker:mk,dash:o.dash});}
+function box(s,x,y,w,h,o){o=o||{};const a={x:x,y:y,width:w,height:h,rx:o.rx||8,fill:o.fill||'#20202e',stroke:o.stroke||'#3a3a52','stroke-width':o.sw||1.5};if(o.dash)a['stroke-dasharray']=o.dash;add(s,'rect',a);}
+function cell(s,x,y,w,h,label,o){o=o||{};box(s,x,y,w,h,o);if(label!=null)txt(s,x+w/2,y+h/2,label,{'font-size':o.fs||13,fill:o.tc||'#fff'});}
+function strip(s,x0,y,vals,o){o=o||{};var w=o.w||44,h=o.h||34,g=o.g||6;vals.forEach(function(v,i){var hi=o.hi&&o.hi.indexOf(i)>=0;cell(s,x0+i*(w+g),y,w,h,String(v),{stroke:hi?'#e0b341':'#3a3a52',fill:hi?'rgba(224,179,65,.2)':'#20202e'});if(o.sub)txt(s,x0+i*(w+g)+w/2,y+h+13,String(o.sub[i]),{fill:'#8a8aa0','font-size':10});});}
+
+/* ======================= CARDS ======================= */
+const CARDS=[
+{ tag:"BFS · Why shortest / monotone queue", flag:"⚑ your resolved depth-gap",
+  q:"Why does BFS give <b>shortest paths</b> (DFS doesn't)? State the <b>monotone-queue invariant</b>: which two rings can the queue hold, and why can't a 5-hop dequeue before a 3-hop?",
+  fig:function(s){
+    var P={A:[80,170],B:[210,105],C:[210,235],D:[350,105],E:[350,235],F:[490,170]};
+    var Ed=[['A','B'],['A','C'],['B','D'],['C','E'],['D','F'],['E','F']];
+    Ed.forEach(function(e){line(s,P[e[0]][0],P[e[0]][1],P[e[1]][0],P[e[1]][1],{stroke:'#7a7a8c',sw:2});});
+    var dist={A:0,B:1,C:1,D:2,E:2,F:3},col={0:'#e0b341',1:'#3fb950',2:'#14b8a6',3:'#7f7f95'};
+    for(var k in P){node(s,P[k][0],P[k][1],k,{stroke:col[dist[k]]});txt(s,P[k][0],P[k][1]-31,'d'+dist[k],{fill:col[dist[k]],'font-size':11,'font-weight':700});}
+    txt(s,300,290,'queue snapshot:',{fill:'#9aa4c4','font-size':12,'text-anchor':'start',x:70});
+    strip(s,180,275,['C(1)','D(2)','E(2)'],{hi:[0]});
+    txt(s,470,300,'only rings d & d+1, in order',{fill:'#8fe0a0','font-size':11});
+  },
+  sol:"<p><span class='key'>The queue is sorted by distance.</span> BFS's FIFO order means at any moment the queue holds only nodes of ring d and ring d+1 — and every ring-(d+1) node was let in <i>behind</i> the remaining ring-d nodes (a node is enqueued only when its predecessor is processed).</p><p>So for a 5-hop node to be <b>in</b> the queue, a 4-hop must already be out; for that 4-hop to be out, all 3-hops must already be gone. A farther node can never jump ahead of a nearer one → the <b>first</b> time you reach a node is via a shortest path. DFS dives deep first, so it can reach a node the long way before the short way — no such guarantee.</p>"},
+
+{ tag:"BFS · Mark on enqueue", flag:"⚑",
+  q:"Mark visited on <b>enqueue</b> or <b>dequeue</b>? On diamond A→B, A→C, B→D, C→D, what breaks with the wrong choice?",
+  fig:function(s){
+    txt(s,175,26,'mark on ENQUEUE ✓',{fill:'#8fe0a0','font-size':13,'font-weight':700});
+    var L={A:[175,60],B:[100,150],C:[250,150],D:[175,240]};
+    [['A','B'],['A','C'],['B','D'],['C','D']].forEach(function(e){arrow(s,L[e[0]][0],L[e[0]][1],L[e[1]][0],L[e[1]][1],{r1:22,color:'g'});});
+    for(var k in L)node(s,L[k][0],L[k][1],k,{stroke:'#3fb950'});
+    txt(s,175,285,'B enqueues D & marks it;',{fill:'#8fe0a0','font-size':11});
+    txt(s,175,301,'C sees D visited → skips. D enters ONCE.',{fill:'#8fe0a0','font-size':11});
+
+    txt(s,545,26,'mark on DEQUEUE ✗',{fill:'#f88','font-size':13,'font-weight':700});
+    var R={A:[545,60],B:[470,150],C:[620,150],D:[545,240]};
+    [['A','B'],['A','C'],['B','D'],['C','D']].forEach(function(e){arrow(s,R[e[0]][0],R[e[0]][1],R[e[1]][0],R[e[1]][1],{r1:22,color:'r'});});
+    for(var k2 in R)node(s,R[k2][0],R[k2][1],k2,{stroke:'#f85149'});
+    txt(s,545,285,'B enqueues D, C also enqueues D',{fill:'#f88','font-size':11});
+    txt(s,545,301,'(D not yet dequeued/marked) → D in queue TWICE',{fill:'#f88','font-size':11});
+  },
+  sol:"<p><span class='key'>Mark on enqueue.</span> The instant a node enters the queue, mark it — so each node enters <b>exactly once</b>.</p><p>If you mark on <i>dequeue</i>, the diamond enqueues D twice: B adds D and marks nothing, then C sees D still unmarked and adds it again. Best case that's wasted work and a bloated queue; worse, if you set <code>dist[D]</code> or a parent on each enqueue you can overwrite or double-count. (Mark-on-dequeue can be made correct with a skip-guard on pop, but it floods the queue — mark-on-enqueue is the clean idiom.)</p>"},
+
+{ tag:"BFS · Multi-source",
+  q:"To get the shortest distance from <b>any</b> of several sources to every node (e.g. rotting oranges), what goes in the queue <i>before</i> the loop, and why is that one super-source?",
+  fig:function(s){
+    var g=[[1,0,0],[0,0,0],[0,0,1]];
+    var x0=90,y0=70,w=64;
+    for(var r=0;r<3;r++)for(var c=0;c<3;c++){var src=g[r][c]===1;cell(s,x0+c*w,y0+r*w,w-6,w-6,src?'S':'',{stroke:src?'#e0b341':'#3a3a52',fill:src?'rgba(224,179,65,.2)':'#161620',fs:16});}
+    node(s,470,150,'★',{r:26,stroke:'#3fb950',fs:20});
+    txt(s,470,110,'virtual super-source',{fill:'#8fe0a0','font-size':11});
+    arrow(s,470,150,x0+30,y0+30,{r1:26,r2:0,color:'g',dash:'5,4'});
+    arrow(s,470,150,x0+2*w+30,y0+2*w+30,{r1:26,r2:0,color:'g',dash:'5,4'});
+    txt(s,600,230,'queue init:',{fill:'#9aa4c4','font-size':12});
+    strip(s,540,250,['S@0','S@0'],{hi:[0,1],w:52});
+    txt(s,300,310,'seed ALL sources at dist 0 at once → each cell gets distance to its NEAREST source',{fill:'#d6d6e6','font-size':11.5});
+  },
+  sol:"<p><span class='key'>Put every source into the queue at distance 0 before the main loop starts.</span> The waves from all sources expand simultaneously, ring by ring, so the first time BFS reaches any cell it's via the <b>nearest</b> source.</p><p>It's identical to adding one imaginary super-source node with a 0-weight edge to every real source and running ordinary single-source BFS from it — the invariant (queue sorted by distance) is untouched, you just start with ring 0 already full. This is the backbone of Rotting Oranges (994), 01 Matrix (542), Walls and Gates (286).</p>"},
+
+{ tag:"BFS · Level tracking",
+  q:"You need to know which <b>level</b> BFS is on (\"minimum number of steps\"). Give the two standard idioms.",
+  fig:function(s){
+    txt(s,360,28,'the queue, split into levels',{fill:'#9aa4c4','font-size':12});
+    strip(s,120,80,['B','C','D','E'],{});
+    line(s,120+2*(44+6)-3,70,120+2*(44+6)-3,124,{stroke:'#e0b341',sw:2,dash:'4,3'});
+    txt(s,180,145,'level 1',{fill:'#3fb950','font-size':11});
+    txt(s,340,145,'level 2',{fill:'#14b8a6','font-size':11});
+    box(s,110,180,500,60,{});
+    txt(s,360,202,'IDIOM A — snapshot the width per level:',{fill:'#8fe0a0','font-size':12});
+    txt(s,360,224,'for _ in range(len(queue)):  pop one whole level, then depth += 1',{fill:'#cfe0ff','font-size':11.5});
+    box(s,110,252,500,58,{});
+    txt(s,360,273,'IDIOM B — carry the distance with each node:',{fill:'#8fe0a0','font-size':12});
+    txt(s,360,295,'push (node, dist);  child dist = parent dist + 1',{fill:'#cfe0ff','font-size':11.5});
+  },
+  sol:"<p><b>Idiom A — level snapshot:</b> at the top of each outer iteration, capture <code>size = len(queue)</code> and pop exactly that many nodes (the current level), then increment depth. Clean when you process a whole level together (Rotting Oranges, right-side view).</p><p><b>Idiom B — distance in the tuple:</b> enqueue <code>(node, dist)</code> and set each child's distance to <code>dist + 1</code> (or keep a <code>dist[]</code> array set at enqueue time). Best when you just need each node's distance, not level boundaries.</p><p>Both are O(V+E); pick by whether you need per-level grouping.</p>"},
+
+{ tag:"BFS · Weighted graphs",
+  q:"Does plain BFS find shortest paths on a <b>weighted</b> graph? Why/why not — and the fix for arbitrary weights vs 0/1 weights?",
+  fig:function(s){
+    var P={A:[130,80],B:[130,250],C:[360,165]};
+    line(s,P.A[0],P.A[1],P.B[0],P.B[1],{stroke:'#f85149',sw:2.4});txt(s,90,165,'10',{fill:'#f88','font-size':13});
+    line(s,P.A[0],P.A[1],P.C[0],P.C[1],{stroke:'#3fb950',sw:2.4});txt(s,250,105,'1',{fill:'#8fe0a0','font-size':13});
+    line(s,P.C[0],P.C[1],P.B[0],P.B[1],{stroke:'#3fb950',sw:2.4});txt(s,250,225,'1',{fill:'#8fe0a0','font-size':13});
+    for(var k in P)node(s,P[k][0],P[k][1],k,{});
+    txt(s,150,300,'BFS: B is 1 HOP away → takes A–B (cost 10) ✗',{fill:'#f88','font-size':12,'text-anchor':'start',x:60});
+    box(s,470,70,230,80,{stroke:'#3fb950'});
+    txt(s,585,96,'true shortest A→C→B = 2',{fill:'#8fe0a0','font-size':12});
+    txt(s,585,120,'(2 hops, but cheaper)',{fill:'#8fe0a0','font-size':11});
+    box(s,470,165,230,60,{});txt(s,585,187,'arbitrary weights → DIJKSTRA',{fill:'#f0cf8a','font-size':12});txt(s,585,208,'(min-heap by cost)',{fill:'#9aa4c4','font-size':10.5});
+    box(s,470,235,230,60,{});txt(s,585,257,'only 0/1 weights → 0-1 BFS',{fill:'#f0cf8a','font-size':12});txt(s,585,278,'(deque: 0→front, 1→back)',{fill:'#9aa4c4','font-size':10.5});
+  },
+  sol:"<p><span class='bad'>No.</span> BFS counts <b>hops</b>, not cost. It settles a node the moment it's first reached (fewest edges), which can be the expensive route — here it takes the single 10-weight edge instead of the two 1-weight edges.</p><p><b>Fixes:</b> for arbitrary non-negative weights, use <b>Dijkstra</b> (a priority queue ordered by accumulated cost — it pops the cheapest frontier node, restoring the 'settle nearest first' invariant). For weights that are only <b>0 or 1</b>, use <b>0-1 BFS</b> with a deque: push 0-weight moves to the front, 1-weight to the back, keeping it sorted in O(V+E).</p>"},
+
+{ tag:"BFS · Trace",
+  q:"Trace BFS from <b>A</b> on: A–B, A–C, B–D, C–D, D–E. Give the visit order and each node's distance from A.",
+  fig:function(s){
+    var P={A:[100,165],B:[260,90],C:[260,240],D:[430,165],E:[600,165]};
+    [['A','B'],['A','C'],['B','D'],['C','D'],['D','E']].forEach(function(e){line(s,P[e[0]][0],P[e[0]][1],P[e[1]][0],P[e[1]][1],{stroke:'#7a7a8c',sw:2});});
+    var dist={A:0,B:1,C:1,D:2,E:3},col={0:'#e0b341',1:'#3fb950',2:'#14b8a6',3:'#a855f7'};
+    for(var k in P){node(s,P[k][0],P[k][1],k,{stroke:col[dist[k]]});txt(s,P[k][0],P[k][1]-31,'d'+dist[k],{fill:col[dist[k]],'font-size':11,'font-weight':700});}
+    txt(s,360,300,'visit order:  A, B, C, D, E     ·     distances:  0, 1, 1, 2, 3',{fill:'#fff','font-size':13,'font-weight':600});
+  },
+  sol:"<p><b>Visit order: A, B, C, D, E.</b> <b>Distances: A=0, B=1, C=1, D=2, E=3.</b></p><p>A (d0) enqueues B and C (d1). Processing B enqueues D and marks it (d2); C then sees D already visited and skips it — D is <i>not</i> re-added (that's mark-on-enqueue paying off). D (d2) enqueues E (d3). Note D is d2 via <b>either</b> B or C — same distance, and first-arrival fixes it.</p>"},
+
+{ tag:"BFS · Complexity",
+  q:"Time and space of BFS on an adjacency list, in V and E? What dominates the space?",
+  fig:function(s){
+    box(s,60,60,290,220,{stroke:'#3fb950'});
+    txt(s,205,86,'TIME  O(V + E)',{fill:'#8fe0a0','font-size':15,'font-weight':700});
+    txt(s,205,120,'each node dequeued ONCE → V',{fill:'#cfe0ff','font-size:12':12,'font-size':12});
+    txt(s,205,148,'each edge scanned once → E',{fill:'#cfe0ff','font-size':12});
+    txt(s,205,176,'(2E for undirected — each',{fill:'#9aa4c4','font-size':11});
+    txt(s,205,194,'edge seen from both ends)',{fill:'#9aa4c4','font-size':11});
+    txt(s,205,232,'V + 2E = O(V+E)',{fill:'#8fe0a0','font-size':14,'font-weight':700});
+
+    box(s,390,60,290,220,{stroke:'#e0b341'});
+    txt(s,535,86,'SPACE  O(V)',{fill:'#f0cf8a','font-size':15,'font-weight':700});
+    txt(s,535,120,'visited set: up to V',{fill:'#cfe0ff','font-size':12});
+    txt(s,535,148,'queue: up to V (one level',{fill:'#cfe0ff','font-size':12});
+    txt(s,535,166,'can be O(V) wide)',{fill:'#9aa4c4','font-size':11});
+    txt(s,535,200,'dist/parent arrays: V',{fill:'#cfe0ff','font-size':12});
+    txt(s,535,236,'dominated by V',{fill:'#f0cf8a','font-size':13,'font-weight':600});
+  },
+  sol:"<p><span class='key'>Time O(V + E), space O(V).</span></p><p><b>Time:</b> every node is dequeued exactly once (V) and its adjacency bucket scanned once — summing degrees over all nodes gives 2E for undirected (E for directed). Total V + E.</p><p><b>Space:</b> the visited set is O(V), and the queue can hold a whole level, which in the worst case is O(V) wide (a star, or the widest layer of a wide graph). Distance/parent arrays are also O(V). So space is dominated by V. (On a grid, V = rows·cols.)</p>"},
+
+{ tag:"DFS · Mark before recurse", flag:"⚑ LC 733 bug",
+  q:"In recursive DFS, <i>where</i> must you mark visited? What happens if you mark <b>after</b> the recursive call? Give a tiny trigger.",
+  fig:function(s){
+    txt(s,175,28,'mark BEFORE recurse ✓',{fill:'#8fe0a0','font-size':13,'font-weight':700});
+    node(s,110,120,'A',{stroke:'#3fb950'});node(s,240,120,'B',{stroke:'#3fb950'});
+    arrow(s,110,120,240,120,{r1:22,color:'g'});
+    txt(s,175,165,'A marked, recurse to B,',{fill:'#8fe0a0','font-size':11});
+    txt(s,175,182,'B marked, B sees A visited → stop',{fill:'#8fe0a0','font-size':11});
+    txt(s,175,214,'terminates ✓',{fill:'#8fe0a0','font-size':12,'font-weight':600});
+
+    txt(s,540,28,'mark AFTER recurse ✗',{fill:'#f88','font-size':13,'font-weight':700});
+    node(s,475,120,'A',{stroke:'#f85149'});node(s,605,120,'B',{stroke:'#f85149'});
+    arrow(s,475,112,605,112,{r1:22,r2:22,color:'r'});
+    arrow(s,605,128,475,128,{r1:22,r2:22,color:'r'});
+    txt(s,540,165,'A recurses to B (A not yet marked),',{fill:'#f88','font-size':11});
+    txt(s,540,182,'B recurses back to A, A → B, A → B …',{fill:'#f88','font-size':11});
+    txt(s,540,214,'RecursionError  ∞',{fill:'#f85149','font-size':14,'font-weight':700});
+    txt(s,360,275,'trigger: flood_fill on [[1,1,1]] — mark cell AFTER dfs(nr,nc) → infinite recursion',{fill:'#d6d6e6','font-size':11.5});
+  },
+  sol:"<p><span class='key'>Mark the node visited the moment you enter it, before looping over neighbors / recursing.</span> This is the recursive twin of mark-on-push.</p><p>If you paint it <b>after</b> the recursive call, a neighbor recurses back into the still-unmarked node before the mark ever lands — A→B→A→B… forever. Your exact LC 733 bug: <code>dfs(nr,nc)</code> then <code>image[nr][nc]=newColor</code> on <code>[[1,1,1]]</code> throws <code>RecursionError</code>. Rule: <b>mark, then recurse.</b> (Plus the color==start early-return guard so you don't recurse when nothing changes.)</p>"},
+
+{ tag:"DFS · Iterative order (push reversed)",
+  q:"An explicit-stack DFS visits a node's neighbors in a <b>different</b> order than recursion. Why? How do you mirror recursion?",
+  fig:function(s){
+    txt(s,150,26,'neighbors of u = [1, 2, 3]',{fill:'#9aa4c4','font-size':12});
+    txt(s,150,52,'recursion visits: 1, 2, 3',{fill:'#8fe0a0','font-size':12});
+    txt(s,150,90,'push 1,2,3 → stack:',{fill:'#cfe0ff','font-size':11});
+    ['1','2','3'].forEach(function(v,i){cell(s,120,110+i*36,50,32,v,{stroke:i===2?'#e0b341':'#3a3a52',fill:i===2?'rgba(224,179,65,.2)':'#20202e'});});
+    txt(s,235,126,'← top (pop 3 first)',{fill:'#f88','font-size':11,'text-anchor':'start'});
+    txt(s,150,240,'pops 3, 2, 1  — REVERSED ✗',{fill:'#f88','font-size':12,'font-weight':600});
+
+    txt(s,545,90,'push REVERSED 3,2,1:',{fill:'#cfe0ff','font-size':11});
+    ['3','2','1'].forEach(function(v,i){cell(s,515,110+i*36,50,32,v,{stroke:i===2?'#3fb950':'#3a3a52',fill:i===2?'rgba(63,185,80,.2)':'#20202e'});});
+    txt(s,630,126,'← pop 1 first',{fill:'#8fe0a0','font-size':11,'text-anchor':'start'});
+    txt(s,545,240,'pops 1, 2, 3 — mirrors recursion ✓',{fill:'#8fe0a0','font-size':12,'font-weight':600});
+  },
+  sol:"<p><span class='key'>A stack is LIFO.</span> If you push neighbors in listed order [1,2,3], the <i>last</i> one pushed (3) is popped first — so the explicit stack dives into the last-listed neighbor first, the reverse of recursion, which follows the list front-to-back.</p><p>To mirror recursion exactly, <b>push the neighbors reversed</b> (<code>for nb in reversed(graph[node])</code>): now 3,2,1 sit on the stack and 1 pops first. The traversal is still a valid DFS either way — reversing just makes the order match the recursive version.</p>"},
+
+{ tag:"DFS · Mark on push vs pop",
+  q:"Iterative DFS: <b>mark-on-push</b> vs <b>mark-on-pop + skip-guard</b>. What can sit on the stack in each, and when does it matter?",
+  fig:function(s){
+    txt(s,175,28,'mark on PUSH',{fill:'#8fe0a0','font-size':13,'font-weight':700});
+    txt(s,175,52,'mark the instant you add it',{fill:'#9aa4c4','font-size':11});
+    ['A','C','B'].forEach(function(v,i){cell(s,120,80+i*34,80,30,v,{stroke:'#3fb950'});});
+    txt(s,175,205,'each node pushed ONCE',{fill:'#8fe0a0','font-size':12});
+    txt(s,175,225,'no duplicates on the stack',{fill:'#8fe0a0','font-size':11});
+
+    txt(s,545,28,'mark on POP + guard',{fill:'#f0cf8a','font-size':13,'font-weight':700});
+    txt(s,545,52,'push freely; skip if seen on pop',{fill:'#9aa4c4','font-size':11});
+    ['D','D','C','B'].forEach(function(v,i){cell(s,505,80+i*30,80,26,v,{stroke:v==='D'&&i===0?'#f85149':'#3a3a52',fill:v==='D'&&i===0?'rgba(248,81,73,.15)':'#20202e'});});
+    txt(s,545,225,'DUPLICATES can pile up;',{fill:'#f0b36b','font-size':11});
+    txt(s,545,242,'guard `if visited: continue` dedupes',{fill:'#f0cf8a','font-size':11});
+    txt(s,360,300,'mirrors recursion (mark-on-pop) · leaner stack (mark-on-push) — both valid',{fill:'#d6d6e6','font-size':11.5});
+  },
+  sol:"<p><b>Mark-on-push:</b> mark a node the moment it's pushed, so it's pushed exactly once — the stack never holds duplicates. Leanest, but the visit timing differs slightly from recursion.</p><p><b>Mark-on-pop + skip-guard:</b> push neighbors without checking, mark when you pop, and <code>if node in visited: continue</code> at the top. This <b>mirrors recursion</b> exactly (a node can sit on the stack more than once — e.g. diamond D pushed by both B and C — and the guard discards the re-pop). Costs more stack space. Both are correct; pick mark-on-push for tightness, mark-on-pop to match recursive semantics.</p>"},
+
+{ tag:"DFS · Recursion limit",
+  q:"When does <b>recursive</b> DFS blow up, and what's the concrete alternative (with the rough threshold)?",
+  fig:function(s){
+    txt(s,175,26,'recursive: call stack',{fill:'#9aa4c4','font-size':12});
+    for(var i=0;i<7;i++)cell(s,120,55+i*26,110,22,'dfs()',{stroke:i>=5?'#f85149':'#3a3a52',fill:i>=5?'rgba(248,81,73,.12)':'#20202e',fs:11});
+    line(s,110,55+5*26-3,250,55+5*26-3,{stroke:'#f85149',sw:2,dash:'5,3'});
+    txt(s,175,250,'~1000 frames → RecursionError',{fill:'#f88','font-size':11.5});
+    txt(s,175,268,'(Python default limit)',{fill:'#7f7f95','font-size':10.5});
+
+    txt(s,540,26,'iterative: explicit stack',{fill:'#9aa4c4','font-size':12});
+    for(var j=0;j<5;j++)cell(s,485,55+j*26,110,22,'node',{stroke:'#3fb950',fs:11});
+    txt(s,540,200,'stack lives on the HEAP',{fill:'#8fe0a0','font-size':11.5});
+    txt(s,540,222,'no frame limit — handles',{fill:'#8fe0a0','font-size':11.5});
+    txt(s,540,240,'a 100k-deep chain fine',{fill:'#8fe0a0','font-size':11.5});
+  },
+  sol:"<p>Recursive DFS uses the <b>call stack</b>, which in Python caps around <span class='key'>~1000 frames</span> by default — a long chain or a deeply skewed graph (e.g. a 2000-node prerequisite chain in LC 207) throws <code>RecursionError</code>.</p><p>Fix: rewrite as <b>iterative DFS with an explicit stack</b> (a Python list on the heap), which has no such limit. (You <i>can</i> bump <code>sys.setrecursionlimit</code>, but that risks a real crash — the iterative form is the robust answer for deep inputs.)</p>"},
+
+{ tag:"DFS · When to reach for it",
+  q:"What are the <b>tell-tale signals</b> that push you toward DFS over BFS? Name at least three problem shapes.",
+  fig:function(s){
+    box(s,50,50,300,250,{stroke:'#e0b341'});
+    txt(s,200,76,'BFS',{fill:'#f0cf8a','font-size':15,'font-weight':700});
+    ['shortest path (unweighted)','fewest steps / min moves','level-order / nearest source'].forEach(function(t,i){txt(s,200,110+i*34,t,{fill:'#cfe0ff','font-size':12});});
+    txt(s,200,230,'keyword: SHORTEST / LEVELS',{fill:'#9aa4c4','font-size':11});
+
+    box(s,370,50,300,250,{stroke:'#3fb950'});
+    txt(s,520,76,'DFS',{fill:'#8fe0a0','font-size':15,'font-weight':700});
+    ['explore-all / does a path exist','connected components / islands','cycle detection','topological sort','backtracking (perms, word search)'].forEach(function(t,i){txt(s,520,104+i*30,t,{fill:'#cfe0ff','font-size':12});});
+    txt(s,520,278,'keyword: PATHS / STRUCTURE / ALL',{fill:'#9aa4c4','font-size':11});
+  },
+  sol:"<p>Reach for <b>DFS</b> when the problem is about <i>structure</i> rather than distance:</p><p>• <b>Path existence / explore-all</b> (can I reach X? enumerate reachable set)<br>• <b>Connected components / islands</b> (flood each component)<br>• <b>Cycle detection</b> (back edge to a gray ancestor)<br>• <b>Topological sort</b> (reverse post-order)<br>• <b>Backtracking</b> (permutations, word search, N-queens)</p><p>Use <b>BFS</b> instead the moment you see <i>shortest / fewest steps / level-order</i> on an unweighted graph. Same engine, different guarantee.</p>"},
+
+{ tag:"DFS · Spot the bug", flag:"⚑",
+  q:"The iterative DFS on the question card pops, appends, and pushes all neighbors with <b>no visited handling</b>. What breaks, on what graph, and the minimal fix?",
+  fig:function(s){
+    node(s,180,150,'A',{stroke:'#f85149'});node(s,340,150,'B',{stroke:'#f85149'});
+    arrow(s,180,142,340,142,{r1:22,r2:22,color:'r'});
+    arrow(s,340,158,180,158,{r1:22,r2:22,color:'r'});
+    txt(s,260,110,'A↔B (or any cycle)',{fill:'#f88','font-size':12});
+    txt(s,480,60,'stack:',{fill:'#9aa4c4','font-size':12});
+    ['B','A','B','A','…'].forEach(function(v,i){cell(s,450,80+i*32,70,28,v,{stroke:'#f85149',fill:'rgba(248,81,73,.1)'});});
+    txt(s,260,250,'no visited → push A, push B, push A … grows forever',{fill:'#f88','font-size':12});
+    txt(s,260,275,'even a DAG re-processes shared nodes (diamond D twice)',{fill:'#f0b36b','font-size':11.5});
+    txt(s,260,300,'FIX: a visited set — skip already-seen nodes (mark on push)',{fill:'#8fe0a0','font-size':12,'font-weight':600});
+  },
+  sol:"<p><span class='bad'>Any graph with a cycle loops forever</span> — A pushes B, B pushes A, A pushes B… the stack grows without bound (or on an infinite-in-effect walk). Even on an acyclic graph it re-processes shared descendants (the diamond appends D twice) and can blow up exponentially on dense DAGs.</p><p><b>Minimal fix:</b> a <code>visited</code> set. Mark-on-push:<pre><code>if nb not in visited:\n    visited.add(nb)\n    stack.append(nb)</code></pre>Plain <code>visited</code> guarantees <i>termination</i> — it's the seatbelt that stops cycles from looping you forever. (Detecting a cycle needs the extra gray/black axis, but just <i>surviving</i> one needs only visited.)</p>"},
+
+{ tag:"Traversal framework · Grid knobs",
+  q:"A grid problem is a traversal on an <b>implicit</b> graph. In \"one engine, two knobs,\" what are the two knobs for a <b>grid</b> DFS?",
+  fig:function(s){
+    var x0=120,y0=70,w=52;
+    for(var r=0;r<4;r++)for(var c=0;c<4;c++){var mid=(r===1&&c===1);cell(s,x0+c*w,y0+r*w,w-6,w-6,'',{stroke:mid?'#e0b341':'#3a3a52',fill:mid?'rgba(224,179,65,.2)':'#161620'});}
+    var cx=x0+1*w+(w-6)/2,cy=y0+1*w+(w-6)/2;
+    arrow(s,cx,cy,cx,cy-w,{r1:20,r2:8,color:'g'});
+    arrow(s,cx,cy,cx,cy+w,{r1:20,r2:8,color:'g'});
+    arrow(s,cx,cy,cx-w,cy,{r1:20,r2:8,color:'g'});
+    arrow(s,cx,cy,cx+w,cy,{r1:20,r2:8,color:'g'});
+    box(s,400,90,290,60,{});txt(s,545,112,'KNOB 1 — neighbors:',{fill:'#8fe0a0','font-size':12});txt(s,545,133,'4 directions + in-bounds check',{fill:'#cfe0ff','font-size':11.5});
+    box(s,400,165,290,60,{});txt(s,545,187,'KNOB 2 — visited:',{fill:'#8fe0a0','font-size':12});txt(s,545,208,'mark the cell IN PLACE (grid[r][c]=0)',{fill:'#cfe0ff','font-size':11.5});
+    txt(s,360,285,'the BFS/DFS engine never changes — only these two knobs do',{fill:'#9aa4c4','font-size':11.5});
+  },
+  sol:"<p>Same engine, two knobs. For a grid: <b>Knob 1 (neighbors)</b> = the four (or eight) directional offsets, each gated by a <b>bounds check</b> <code>0 &lt;= nr &lt; rows and 0 &lt;= nc &lt; cols</code> (plus any land/water condition). <b>Knob 2 (visited)</b> = mark the cell <b>in place</b> — flip <code>grid[r][c]</code> to <code>0</code> / <code>'#'</code> instead of a separate set.</p><p>A grid <i>is</i> a graph where node = cell and edges = adjacency; recognizing that lets you reuse the exact same DFS/BFS you wrote for explicit graphs (LC 200, 695, 733, 1091).</p>"},
+
+{ tag:"DFS · Pre vs post-order → topo",
+  q:"Pre-order vs post-order in DFS: what's finished when, and which one (reversed) gives a valid <b>topological order</b>? Tie it to gray/black.",
+  fig:function(s){
+    var P={u:[150,90],v:[150,230]};
+    arrow(s,150,90,150,230,{r1:22,color:'default'});
+    node(s,150,90,'u',{stroke:'#e0b341'});node(s,150,230,'v',{stroke:'#7f7f95'});
+    txt(s,150,55,'edge u → v',{fill:'#9aa4c4','font-size':12});
+    txt(s,360,80,'DFS goes DEEPEST first:',{fill:'#cfe0ff','font-size':12,'text-anchor':'start',x:280});
+    txt(s,280,112,'enter u (GRAY / pre)',{fill:'#f0cf8a','font-size':12,'text-anchor':'start'});
+    txt(s,280,138,'  enter v … finish v (BLACK / post) ← v done FIRST',{fill:'#8fe0a0','font-size':12,'text-anchor':'start'});
+    txt(s,280,164,'finish u (BLACK / post)',{fill:'#f0cf8a','font-size':12,'text-anchor':'start'});
+    txt(s,280,210,'post-order (finish order): [v, u]',{fill:'#f88','font-size':12.5,'text-anchor':'start'});
+    txt(s,280,238,'REVERSE → [u, v]  ✓ topo (u before v)',{fill:'#8fe0a0','font-size':13,'font-weight':600,'text-anchor':'start'});
+    txt(s,360,300,'every arrow points RIGHT — reuse has_cycle_directed gray/black, add append-on-finish + reverse',{fill:'#9aa4c4','font-size':11});
+  },
+  sol:"<p><b>Pre-order</b> records a node when you first enter it (paint it gray). <b>Post-order</b> records it when you finish it — after all its descendants are done (paint it black).</p><p>For an edge u→v, DFS descends into v and <b>finishes v before u</b>, so v lands earlier in the finish order: post-order = [v, u]. <span class='key'>Reverse the post-order → [u, v]</span>, putting the prerequisite u before v — a valid topological order. That's exactly your DFS-topo: take <code>has_cycle_directed</code>, <code>append(node)</code> the moment it turns black, then return <code>order[::-1]</code> (and the gray back-edge check still returns None on a cycle).</p>"}
+];
+
+/* ======================= ENGINE ======================= */
+var cur=0, revealed=CARDS.map(function(){return false;});
+var dots=document.getElementById('dots');
+CARDS.forEach(function(_,i){var d=document.createElement('div');d.className='dot';d.textContent=i+1;d.onclick=function(){cur=i;render();};dots.appendChild(d);});
+function render(){
+  var c=CARDS[cur];
+  document.getElementById('qn').textContent='Question '+(cur+1)+' / 15';
+  var tags='<span class="tag">'+c.tag+'</span>'+(c.flag?'<span class="flag">'+c.flag+'</span>':'');
+  document.getElementById('tags').innerHTML=tags;
+  document.getElementById('qt').innerHTML=c.q;
+  while(svg.firstChild)svg.removeChild(svg.firstChild);
+  defs(svg); c.fig(svg);
+  var sol=document.getElementById('sol');
+  sol.innerHTML=c.sol; sol.hidden=!revealed[cur];
+  document.getElementById('show').textContent=revealed[cur]?'Hide solution':'Show solution';
+  Array.prototype.forEach.call(dots.children,function(d,i){d.className='dot'+(i===cur?' active':'')+(revealed[i]?' done':'');});
+}
+document.getElementById('prev').onclick=function(){cur=(cur-1+CARDS.length)%CARDS.length;render();};
+document.getElementById('next').onclick=function(){cur=(cur+1)%CARDS.length;render();};
+document.getElementById('show').onclick=function(){revealed[cur]=!revealed[cur];render();};
+document.addEventListener('keydown',function(e){
+  if(e.key==='ArrowLeft'){cur=(cur-1+CARDS.length)%CARDS.length;render();}
+  else if(e.key==='ArrowRight'){cur=(cur+1)%CARDS.length;render();}
+  else if(e.key===' '){e.preventDefault();revealed[cur]=!revealed[cur];render();}
+});
+render();
+</script>
+</body>
+</html>

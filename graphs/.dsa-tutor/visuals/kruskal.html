@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Kruskal's MST — sort the menu, union is the bouncer</title>
+<style>
+  body{margin:0;background:#15151f;color:#eee;font:15px/1.5 -apple-system,Segoe UI,Roboto,sans-serif}
+  .wrap{max-width:860px;margin:0 auto;padding:24px}
+  h1{font-size:20px;margin:0 0 4px}
+  .desc{color:#aaa;margin:0 0 16px}
+  #stage{background:#1d1d2a;border:1px solid #333;border-radius:10px}
+  svg{width:100%;height:auto;display:block}
+  .narration{min-height:48px;margin:12px 0;color:#cfcfe0}
+  .controls{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  button{background:#2b2b3a;color:#eee;border:1px solid #555;border-radius:6px;padding:6px 12px;cursor:pointer}
+  button:hover{border-color:#e0b341}
+  .counter{margin-left:auto;color:#888}
+  .quiz{margin-top:16px;background:#1d1d2a;border:1px solid #3a3a4a;border-radius:10px;padding:14px}
+  .quiz .q{font-weight:600;margin-bottom:8px}
+  .quiz button{margin:4px 6px 4px 0}
+  .reveal{margin-top:10px;color:#cfcfe0}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Kruskal's MST — sort the menu, union is the bouncer</h1>
+  <p class="desc">6 towns, 9 possible roads. Node colour = which DSU group (leader) it belongs to. Green road = built, red dashed = bounced (would close a loop), gold = being considered.</p>
+  <div id="stage"><svg id="svg" viewBox="0 0 700 360"></svg></div>
+  <div class="narration" id="narration">—</div>
+  <div class="controls">
+    <button id="prev">◀ Prev</button>
+    <button id="play">▶ Play</button>
+    <button id="step">Step ▶|</button>
+    <button id="reset">⟲ Reset</button>
+    <label>Speed <input id="speed" type="range" min="300" max="2400" value="1600"></label>
+    <span class="counter" id="counter"></span>
+  </div>
+  <div class="quiz" id="quiz" hidden>
+    <div class="q" id="qtext"></div>
+    <div id="qopts"></div>
+    <div class="reveal" id="reveal" hidden></div>
+  </div>
+</div>
+<script>
+/* ===== infrastructure: drawing helpers ===== */
+const SVG="http://www.w3.org/2000/svg";
+const svg=document.getElementById('svg');
+function el(t,a){const e=document.createElementNS(SVG,t);for(const k in a)e.setAttribute(k,a[k]);return e;}
+function clear(){while(svg.firstChild)svg.removeChild(svg.firstChild);}
+function txt(x,y,s,a){const t=el('text',Object.assign({x,y,fill:'#fff','font-size':13},a||{}));t.textContent=s;svg.appendChild(t);return t;}
+
+/* ===== infrastructure: step engine + questions (do not edit) ===== */
+const narration=document.getElementById('narration'),counter=document.getElementById('counter');
+const quiz=document.getElementById('quiz'),qtext=document.getElementById('qtext'),qopts=document.getElementById('qopts'),reveal=document.getElementById('reveal');
+const playBtn=document.getElementById('play'),speed=document.getElementById('speed');
+let STEPS=[],idx=0,timer=null;
+function render(){const s=STEPS[idx];s.draw();narration.textContent=s.note||'';counter.textContent=(idx+1)+' / '+STEPS.length;
+  if(s.question)showQuestion(s.question);else quiz.hidden=true;}
+function showQuestion(q){quiz.hidden=false;qtext.textContent=q.prompt;reveal.hidden=true;qopts.innerHTML='';
+  q.options.forEach((o,i)=>{const b=document.createElement('button');b.textContent=o;
+    b.onclick=()=>{reveal.hidden=false;reveal.textContent=(i===q.answer?'✓ Correct. ':'✗ Not quite. ')+q.explain;};qopts.appendChild(b);});}
+function step(){if(idx<STEPS.length-1){idx++;render();}else pause();}
+function prev(){if(idx>0){idx--;render();}}
+function pause(){clearInterval(timer);timer=null;playBtn.textContent='▶ Play';}
+function play(){if(timer){pause();return;}playBtn.textContent='⏸ Pause';timer=setInterval(()=>{if(idx>=STEPS.length-1){pause();return;}if(STEPS[idx].question){pause();return;}step();},+speed.value);}
+function reset(){pause();idx=0;render();}
+document.getElementById('prev').onclick=prev;
+document.getElementById('step').onclick=()=>{pause();step();};
+document.getElementById('reset').onclick=reset;
+playBtn.onclick=play;
+
+/* ===== EDIT BELOW: define the lesson ===== */
+const POS={A:[50,110],B:[180,45],C:[150,235],D:[300,115],E:[290,300],F:[400,225]};
+// already sorted by weight — this IS step 1 of Kruskal
+const EDGES=[['A','C',1],['B','C',2],['D','E',2],['E','F',3],['A','B',4],['B','D',5],['D','F',6],['C','D',8],['C','E',10]];
+const GROUP_COL=['#3b82f6','#ec4899','#14b8a6','#a855f7','#f97316','#eab308'];
+
+// state: {leader:{node:root}, status:[per edge: null|'keep'|'skip'], cur:edgeIndex|null, total}
+function drawState(st){
+  clear();
+  const roots=[...new Set(Object.keys(POS).map(n=>st.leader[n]))].sort();
+  EDGES.forEach(([u,v,w],i)=>{
+    const s=st.status[i], cur=st.cur===i;
+    const [x1,y1]=POS[u],[x2,y2]=POS[v];
+    const stroke=cur?'#e0b341':s==='keep'?'#3fb950':s==='skip'?'#f85149':'#55556a';
+    const a={x1,y1,x2,y2,stroke,'stroke-width':cur?5:s==='keep'?5:2};
+    if(s==='skip')a['stroke-dasharray']='6,5';
+    svg.appendChild(el('line',a));
+    const mx=(x1+x2)/2,my=(y1+y2)/2;
+    svg.appendChild(el('rect',{x:mx-11,y:my-10,width:22,height:18,rx:4,fill:'#1d1d2a'}));
+    txt(mx,my+4,w,{'text-anchor':'middle','font-size':12,fill:cur?'#ffd75e':'#ccc'});
+  });
+  Object.keys(POS).forEach(n=>{
+    const [x,y]=POS[n], col=GROUP_COL[Object.keys(POS).indexOf(st.leader[n])];
+    svg.appendChild(el('circle',{cx:x,cy:y,r:20,fill:col,stroke:'#fff','stroke-width':st.leader[n]===n?3:1}));
+    txt(x,y+5,n,{'text-anchor':'middle','font-size':15,'font-weight':700});
+  });
+  // side panel: the sorted menu
+  const px=470;
+  txt(px,30,'Sorted menu (cheapest first)',{'font-weight':700,fill:'#e0b341'});
+  EDGES.forEach(([u,v,w],i)=>{
+    const s=st.status[i], cur=st.cur===i, y=58+i*24;
+    const mark=s==='keep'?'✓ union → True':s==='skip'?'✗ union → False':cur?'◀ asking…':'';
+    txt(px,y,`${u}–${v}  ${w}`,{fill:cur?'#ffd75e':s==='keep'?'#3fb950':s==='skip'?'#f85149':'#aaa','font-weight':cur?700:400});
+    txt(px+75,y,mark,{'font-size':12,fill:s==='keep'?'#3fb950':s==='skip'?'#f85149':'#ffd75e'});
+  });
+  const kept=st.status.filter(s=>s==='keep').length;
+  txt(px,295,`edges kept: ${kept} / 5  (n−1)`,{fill:kept===5?'#3fb950':'#ccc'});
+  txt(px,318,`total cost: ${st.total}`,{fill:'#ccc'});
+  txt(px,341,`groups: ${roots.length}`,{fill:'#ccc'});
+}
+
+function buildSteps(){
+  const steps=[];
+  const leader={};Object.keys(POS).forEach(n=>leader[n]=n);
+  const status=EDGES.map(()=>null);
+  let total=0;
+  const find=n=>leader[n]===n?n:find(leader[n]);
+  const snap=(cur,note,question)=>{const st={leader:{},status:status.slice(),cur,total};
+    Object.keys(POS).forEach(n=>st.leader[n]=find(n));steps.push({draw:()=>drawState(st),note,question});};
+
+  snap(null,"STEP 1 — SORT the menu by cost (right panel). Every town starts as its own one-person group: 6 colours = 6 groups. Goal: n−1 = 5 roads.");
+  const notes={
+    0:["A–C (1): union(A,C) → different leaders → True. BUILD it. A and C now share a colour.","Cheapest road on the menu, and it joins two strangers."],
+    1:["B–C (2): B is alone, C is in A's group → union → True. BUILD. Group {A,B,C}."],
+    2:["D–E (2): two strangers → True. BUILD. Notice: a SECOND group grows on the other side. Kruskal doesn't grow one tree — it grows a forest that fuses."],
+    3:["E–F (3): F joins D's group → True. BUILD. Two groups left: {A,B,C} and {D,E,F}."],
+    5:["B–D (5): B's group ≠ D's group → union → True. BUILD. This is the BRIDGE — it fuses the two forests into one. 5 roads = n−1."]
+  };
+  for(let i=0;i<EDGES.length;i++){
+    const [u,v,w]=EDGES[i];
+    if(i===4){
+      snap(4,"A–B (4) is next. Before you step — look at the colours of A and B.",
+        {prompt:"Keep or skip A–B (cost 4)?",options:["Keep — it's the cheapest road left","Skip — A and B already share a leader","Keep — B needs a second connection"],answer:1,
+         explain:"A and B are the same colour: A–C–B already connects them. find(A)==find(B), so union returns False and the road is bounced. Building it would close the loop A–B–C–A."});
+      status[4]='skip';
+      snap(null,"A–B (4): union(A,B) → same leader → False. BOUNCED (red dashed). It would only close the loop A–C–B–A. Cheap doesn't matter — REDUNDANT beats cheap.");
+      continue;
+    }
+    if(i===6){
+      snap(null,"We have 5 roads and ONE colour. D–F, C–D, C–E are still on the menu.",
+        {prompt:"Do we need to examine D–F, C–D and C–E?",options:["Yes — one might be cheaper overall","No — 5 = n−1 edges, we can stop","Yes — to check for cycles"],answer:1,
+         explain:"A tree on n nodes has exactly n−1 edges. Once you have 5, every town shares one leader, so every remaining road would get union → False anyway. Early-exit: break when len(mst) == n−1."});
+      break;
+    }
+    const lu=find(u),lv=find(v);
+    leader[lv]=lu; status[i]='keep'; total+=w;
+    snap(null,notes[i][0]);
+  }
+  snap(null,"DONE. MST = A–C, B–C, D–E, E–F, B–D. Total = 1+2+2+3+5 = 13. The code shape: sort edges → for each, if uf.union(u,v): keep it → stop at n−1.");
+  return steps;
+}
+STEPS=buildSteps();render();
+</script>
+</body>
+</html>
