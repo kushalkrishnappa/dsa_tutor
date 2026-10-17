@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="utf-8"><title>Graphs roadmap</title>
+<style>body{margin:0;background:#15151f;color:#eee;font:15px/1.5 -apple-system,Segoe UI,Roboto,sans-serif}
+.wrap{max-width:1140px;margin:0 auto;padding:20px}h1{font-size:20px}.legend{color:#bbb;font-size:13px}
+svg{width:100%;height:auto}</style></head>
+<body><div class="wrap">
+<h1>Graphs — learning roadmap</h1>
+<p class="legend">✓ Green = done · Gold = current · Amber ◐ = started, unfinished · Solid → prerequisite · Dashed ⇢ next phase · Dashed box = stretch &nbsp;|&nbsp; updated 2026-09-26</p>
+<svg id="map" viewBox="0 0 1100 680"></svg>
+</div>
+<script>
+const NS="http://www.w3.org/2000/svg",svg=document.getElementById('map'),W=200,H=54;
+const C={found:'#3b82f6',current:'#e0b341',done:'#2ea043',inprog:'#f59e0b',core:'#3fb950',app:'#14b8a6',sp:'#a855f7',adv:'#9ca3af'};
+const B={
+  term:{x:360,y:24,phase:'done',label:'✓ Terminology',sub:'vertices · edges · directed · weights'},
+  repr:{x:600,y:24,phase:'done',label:'✓ Representations',sub:'list = per friend · matrix = per seat'},
+
+  bfs:{x:360,y:130,phase:'done',label:'✓ BFS',sub:'queue · FIFO keeps the wave sorted'},
+  dfs:{x:600,y:130,phase:'done',label:'✓ DFS',sub:'stack · mark BEFORE you recurse'},
+  patterns:{x:480,y:236,phase:'done',label:'✓ Traversal Patterns',sub:'one engine, two knobs: neighbours + visited'},
+
+  cc:{x:110,y:342,phase:'done',label:'✓ Connected Components',sub:'find dry land · flood the island'},
+  cycle:{x:360,y:342,phase:'done',label:'✓ Cycle Detection',sub:'back edge · gray vs door · LC 207'},
+  topo:{x:600,y:342,phase:'inprog',label:'◐ Topological Sort',sub:'Kahn + DFS impl done · LC 210 pending'},
+  bip:{x:850,y:342,phase:'app',label:'Bipartite Check',sub:'2-colour · odd cycle = impossible'},
+
+  dsu:{x:110,y:448,phase:'inprog',label:'◐ Union-Find (DSU)',sub:'impl verified · PRACTICE PARKED'},
+  unw:{x:430,y:448,phase:'sp',label:'Unweighted Shortest Path',sub:'BFS + distance array + parent trail'},
+  dij:{x:730,y:448,phase:'sp',label:"Dijkstra's Algorithm",sub:'min-heap · weights ≥ 0 only'},
+
+  mst:{x:110,y:554,phase:'current',label:'▶ Minimum Spanning Tree',sub:'YOU ARE HERE · Kruskal (DSU) · Prim (heap)'},
+  bell:{x:430,y:554,phase:'sp',label:'Bellman-Ford',sub:'relax V-1 times · negative edges'},
+  floyd:{x:730,y:554,phase:'adv',label:'Floyd-Warshall',sub:'all-pairs · O(V³) · stretch'}
+};
+const L=[['term','repr','p'],
+  ['repr','bfs','p'],['repr','dfs','p'],
+  ['bfs','patterns','p'],['dfs','patterns','p'],
+  ['patterns','cc','p'],['patterns','cycle','p'],['patterns','bip','p'],
+  ['cycle','topo','p'],
+  ['cc','dsu','n'],['dsu','mst','p'],
+  ['topo','unw','n'],['unw','dij','p'],['dij','bell','n'],['bell','floyd','n']];
+const labels=[['FOUNDATIONS','found',90],['TRAVERSAL','core',215],['APPLICATIONS','app',369],['STRUCTURE & PATHS','sp',530]];
+
+const defs=document.createElementNS(NS,'defs');
+defs.innerHTML='<marker id="as" markerWidth="9" markerHeight="9" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="#8b8b9e"/></marker>'+
+'<marker id="an" markerWidth="9" markerHeight="9" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="#a7adc4"/></marker>';
+svg.appendChild(defs);
+function geo(n){return {cx:n.x+W/2,cy:n.y+H/2,top:n.y,bottom:n.y+H,left:n.x,right:n.x+W};}
+function pathFor(s,t){const a=geo(s),b=geo(t);
+  if(Math.abs(s.y-t.y)<1)return t.x>s.x?`M${a.right} ${a.cy} H${b.left}`:`M${a.left} ${a.cy} H${b.right}`;
+  const my=(a.bottom+b.top)/2;return `M${a.cx} ${a.bottom} V${my} H${b.cx} V${b.top}`;}
+L.forEach(([s,t,ty])=>{const p=document.createElementNS(NS,'path');p.setAttribute('d',pathFor(B[s],B[t]));
+  p.setAttribute('fill','none');p.setAttribute('stroke',ty==='n'?'#a7adc4':'#8b8b9e');
+  p.setAttribute('stroke-width',ty==='n'?'1.6':'2');if(ty==='n')p.setAttribute('stroke-dasharray','6,5');
+  p.setAttribute('marker-end',ty==='n'?'url(#an)':'url(#as)');svg.appendChild(p);});
+labels.forEach(([txt,ph,cy])=>{const t=document.createElementNS(NS,'text');t.setAttribute('x',26);t.setAttribute('y',cy);
+  t.setAttribute('fill',C[ph]);t.setAttribute('font-size','11');t.setAttribute('font-weight','700');
+  t.setAttribute('letter-spacing','1.5');t.setAttribute('text-anchor','middle');
+  t.setAttribute('transform',`rotate(-90,26,${cy})`);t.textContent=txt;svg.appendChild(t);});
+Object.values(B).forEach(n=>{const col=C[n.phase],cur=n.phase==='current',adv=n.phase==='adv';
+  const r=document.createElementNS(NS,'rect');r.setAttribute('x',n.x);r.setAttribute('y',n.y);
+  r.setAttribute('width',W);r.setAttribute('height',H);r.setAttribute('rx','9');
+  r.setAttribute('fill',cur?'rgba(224,179,65,0.16)':(n.phase==='inprog'?'rgba(245,158,11,0.10)':'rgba(38,38,52,0.92)'));
+  r.setAttribute('stroke',col);r.setAttribute('stroke-width',cur?'3':'2');
+  if(adv)r.setAttribute('stroke-dasharray','6,4');svg.appendChild(r);
+  const t1=document.createElementNS(NS,'text');t1.setAttribute('x',n.x+14);t1.setAttribute('y',n.y+23);
+  t1.setAttribute('fill','#fff');t1.setAttribute('font-size','13.5');t1.setAttribute('font-weight','700');t1.textContent=n.label;svg.appendChild(t1);
+  const t2=document.createElementNS(NS,'text');t2.setAttribute('x',n.x+14);t2.setAttribute('y',n.y+41);
+  t2.setAttribute('fill','#b8b8c8');t2.setAttribute('font-size','10.5');t2.textContent=n.sub;svg.appendChild(t2);});
+</script>
+</body>
+</html>

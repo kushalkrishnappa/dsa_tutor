@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Trie Fundamentals — building "cat" then "car"</title>
+<style>
+  body{margin:0;background:#15151f;color:#eee;font:15px/1.5 -apple-system,Segoe UI,Roboto,sans-serif}
+  .wrap{max-width:760px;margin:0 auto;padding:24px}
+  h1{font-size:20px;margin:0 0 4px}
+  .desc{color:#aaa;margin:0 0 16px}
+  #stage{background:#1d1d2a;border:1px solid #333;border-radius:10px}
+  svg{width:100%;height:auto;display:block}
+  .narration{min-height:24px;margin:12px 0;color:#cfcfe0}
+  .controls{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  button{background:#2b2b3a;color:#eee;border:1px solid #555;border-radius:6px;padding:6px 12px;cursor:pointer}
+  button:hover{border-color:#e0b341}
+  .counter{margin-left:auto;color:#888}
+  .quiz{margin-top:16px;background:#1d1d2a;border:1px solid #3a3a4a;border-radius:10px;padding:14px}
+  .quiz .q{font-weight:600;margin-bottom:8px}
+  .quiz button{margin:4px 6px 4px 0}
+  .reveal{margin-top:10px;color:#cfcfe0}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Trie Fundamentals — inserting "cat", then "car"</h1>
+  <p class="desc">Gold = the node we're touching right now · Green = already committed · A ✓ on a node = its end-of-word flag is ON.</p>
+  <div id="stage"><svg id="svg" viewBox="0 0 640 360"></svg></div>
+  <div class="narration" id="narration">—</div>
+  <div class="controls">
+    <button id="prev">◀ Prev</button>
+    <button id="play">▶ Play</button>
+    <button id="step">Step ▶|</button>
+    <button id="reset">⟲ Reset</button>
+    <label>Speed <input id="speed" type="range" min="300" max="1600" value="850"></label>
+    <span class="counter" id="counter"></span>
+  </div>
+  <div class="quiz" id="quiz" hidden>
+    <div class="q" id="qtext"></div>
+    <div id="qopts"></div>
+    <div class="reveal" id="reveal" hidden></div>
+  </div>
+</div>
+<script>
+const SVG="http://www.w3.org/2000/svg";
+const svg=document.getElementById('svg');
+function el(t,a){const e=document.createElementNS(SVG,t);for(const k in a)e.setAttribute(k,a[k]);return e;}
+function clear(){while(svg.firstChild)svg.removeChild(svg.firstChild);}
+const COL={idle:'#2b2b3a',idleStroke:'#666',visited:'#3fb950',current:'#e0b341',curStroke:'#ffd75e',edge:'#7a7a8c',text:'#fff'};
+
+function drawGraph(g){
+  clear(); const pos={}; g.nodes.forEach(n=>pos[n.id]=n);
+  (g.edges||[]).forEach(([a,b])=>svg.appendChild(el('line',
+    {x1:pos[a].x,y1:pos[a].y,x2:pos[b].x,y2:pos[b].y,stroke:COL.edge,'stroke-width':2})));
+  g.nodes.forEach(n=>{
+    const v=g.visited&&g.visited.has(n.id), c=g.current===n.id;
+    svg.appendChild(el('circle',{cx:n.x,cy:n.y,r:20,
+      fill:c?COL.current:(v?COL.visited:COL.idle),
+      stroke:c?COL.curStroke:(v?COL.visited:COL.idleStroke),'stroke-width':2}));
+    const t=el('text',{x:n.x,y:n.y+5,'text-anchor':'middle',fill:COL.text,'font-size':14});
+    t.textContent=(n.label!=null?n.label:n.id); svg.appendChild(t);
+  });
+}
+
+const narration=document.getElementById('narration'),counter=document.getElementById('counter');
+const quiz=document.getElementById('quiz'),qtext=document.getElementById('qtext'),qopts=document.getElementById('qopts'),reveal=document.getElementById('reveal');
+const playBtn=document.getElementById('play'),speed=document.getElementById('speed');
+let STEPS=[],idx=0,timer=null;
+function render(){const s=STEPS[idx];s.draw();narration.textContent=s.note||'';counter.textContent=(idx+1)+' / '+STEPS.length;
+  if(s.question)showQuestion(s.question);else quiz.hidden=true;}
+function showQuestion(q){quiz.hidden=false;qtext.textContent=q.prompt;reveal.hidden=true;qopts.innerHTML='';
+  q.options.forEach((o,i)=>{const b=document.createElement('button');b.textContent=o;
+    b.onclick=()=>{reveal.hidden=false;reveal.textContent=(i===q.answer?'✓ Correct. ':'✗ Not quite. ')+q.explain;};qopts.appendChild(b);});}
+function step(){if(idx<STEPS.length-1){idx++;render();}else pause();}
+function prev(){if(idx>0){idx--;render();}}
+function pause(){clearInterval(timer);timer=null;playBtn.textContent='▶ Play';}
+function play(){if(timer){pause();return;}playBtn.textContent='⏸ Pause';timer=setInterval(()=>{if(idx>=STEPS.length-1){pause();return;}step();},+speed.value);}
+function reset(){pause();idx=0;render();}
+document.getElementById('prev').onclick=prev;
+document.getElementById('step').onclick=()=>{pause();step();};
+document.getElementById('reset').onclick=reset;
+playBtn.onclick=play;
+
+function buildSteps(){
+  const P={
+    root:{id:'root',x:320,y:44,label:'root'},
+    c:{id:'c',x:320,y:130,label:'c'},
+    a:{id:'a',x:320,y:216,label:'a'},
+    t:{id:'t',x:230,y:302,label:'t ✓'},
+    r:{id:'r',x:410,y:302,label:'r ✓'}
+  };
+  const E={rc:['root','c'],ca:['c','a'],at:['a','t'],ar:['a','r']};
+  const g=(ids,edges,visited,current)=>({nodes:ids.map(i=>P[i]),edges:edges.map(e=>E[e]),visited:new Set(visited),current});
+  const steps=[];
+  steps.push({draw:()=>drawGraph(g(['root'],[],[],'root')),
+    note:"Empty trie — just the root. It holds no letter; it's only the launch pad."});
+  steps.push({draw:()=>drawGraph(g(['root','c'],['rc'],['root'],'c')),
+    note:"Insert 'cat'. Root's slot for 'c' (index 2) is empty → create a node and hang it there."});
+  steps.push({draw:()=>drawGraph(g(['root','c','a'],['rc','ca'],['root','c'],'a')),
+    note:"Slot 'a' under the c-node is empty → create it and walk down."});
+  steps.push({draw:()=>drawGraph(g(['root','c','a','t'],['rc','ca','at'],['root','c','a'],'t')),
+    note:"Last letter 't' → create it AND flip its end-flag ON (the ✓). 'cat' is now a complete word.",
+    question:{prompt:"'cat' is fully inserted. We now start inserting 'car' from the root. Root already has a 'c' child. What do we do at that 'c'?",
+      options:["Create a brand-new 'c' node","Walk into the existing 'c' node","Overwrite the old 'c' node"],answer:1,
+      explain:"The slot is already filled, so we reuse it — walk in, don't create. That reuse is the whole point of a trie."}});
+  steps.push({draw:()=>drawGraph(g(['root','c','a','t'],['rc','ca','at'],['root'],'c')),
+    note:"Insert 'car', back at the root. Slot 'c' already exists → walk in, don't create."});
+  steps.push({draw:()=>drawGraph(g(['root','c','a','t'],['rc','ca','at'],['root','c'],'a')),
+    note:"Slot 'a' also already exists → walk in. This is the shared 'ca' prefix — the reuse you predicted."});
+  steps.push({draw:()=>drawGraph(g(['root','c','a','t','r'],['rc','ca','at','ar'],['root','c','a','t'],'r')),
+    note:"Slot 'r' under the a-node IS empty → create it, flip its end-flag. 'car' cost us exactly ONE new node."});
+  steps.push({draw:()=>drawGraph(g(['root','c','a','t','r'],['rc','ca','at','ar'],['root','c','a','t','r'],null)),
+    note:"Done: 4 nodes, 2 words. 'ca' is shared. Index = the letter, ✓ flag = the finish line."});
+  return steps;
+}
+STEPS=buildSteps();render();
+</script>
+</body>
+</html>

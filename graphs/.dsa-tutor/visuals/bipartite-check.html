@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Bipartite Check — 2-Coloring</title>
+<style>
+  body{margin:0;background:#15151f;color:#eee;font:15px/1.5 -apple-system,Segoe UI,Roboto,sans-serif}
+  .wrap{max-width:760px;margin:0 auto;padding:24px}
+  h1{font-size:20px;margin:0 0 4px}
+  .desc{color:#aaa;margin:0 0 16px}
+  #stage{background:#1d1d2a;border:1px solid #333;border-radius:10px}
+  svg{width:100%;height:auto;display:block}
+  .narration{min-height:24px;margin:12px 0;color:#cfcfe0}
+  .controls{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  button{background:#2b2b3a;color:#eee;border:1px solid #555;border-radius:6px;padding:6px 12px;cursor:pointer}
+  button:hover{border-color:#e0b341}
+  .counter{margin-left:auto;color:#888}
+  .quiz{margin-top:16px;background:#1d1d2a;border:1px solid #3a3a4a;border-radius:10px;padding:14px}
+  .quiz .q{font-weight:600;margin-bottom:8px}
+  .quiz button{margin:4px 6px 4px 0}
+  .reveal{margin-top:10px;color:#cfcfe0}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Bipartite Check — paint the graph in two colors</h1>
+  <p class="desc">Paint the start node RED, force every neighbor to the opposite color, and walk. A bipartite graph finishes with no edge joining two same-color nodes. An odd cycle makes that impossible.</p>
+  <div id="stage"><svg id="svg" viewBox="0 0 640 360"></svg></div>
+  <div class="narration" id="narration">—</div>
+  <div class="controls">
+    <button id="prev">◀ Prev</button>
+    <button id="play">▶ Play</button>
+    <button id="step">Step ▶|</button>
+    <button id="reset">⟲ Reset</button>
+    <label>Speed <input id="speed" type="range" min="300" max="1600" value="950"></label>
+    <span class="counter" id="counter"></span>
+  </div>
+  <div class="quiz" id="quiz" hidden>
+    <div class="q" id="qtext"></div>
+    <div id="qopts"></div>
+    <div class="reveal" id="reveal" hidden></div>
+  </div>
+</div>
+<script>
+const SVG="http://www.w3.org/2000/svg";
+const svg=document.getElementById('svg');
+function el(t,a){const e=document.createElementNS(SVG,t);for(const k in a)e.setAttribute(k,a[k]);return e;}
+function clear(){while(svg.firstChild)svg.removeChild(svg.firstChild);}
+const RED='#ef4444',BLUE='#3b82f6',IDLE='#2b2b3a',IDLES='#666';
+
+// cfg: {nodes:[{id,x,y}], edges:[[a,b]], colors:{id:'R'|'B'}, conflict:[a,b]}
+function draw(cfg){
+  clear(); const pos={}; cfg.nodes.forEach(n=>pos[n.id]=n);
+  (cfg.edges||[]).forEach(([a,b])=>{
+    const isC=cfg.conflict&&((cfg.conflict[0]===a&&cfg.conflict[1]===b)||(cfg.conflict[0]===b&&cfg.conflict[1]===a));
+    svg.appendChild(el('line',{x1:pos[a].x,y1:pos[a].y,x2:pos[b].x,y2:pos[b].y,
+      stroke:isC?'#ff2d2d':'#7a7a8c','stroke-width':isC?5:2,'stroke-dasharray':isC?'2,0':''}));
+  });
+  cfg.nodes.forEach(n=>{
+    const c=(cfg.colors||{})[n.id];
+    const fill=c==='R'?RED:(c==='B'?BLUE:IDLE), stroke=c?'#fff':IDLES;
+    svg.appendChild(el('circle',{cx:n.x,cy:n.y,r:22,fill:fill,stroke:stroke,'stroke-width':2}));
+    const t=el('text',{x:n.x,y:n.y+5,'text-anchor':'middle',fill:'#fff','font-size':15,'font-weight':700});
+    t.textContent=n.id; svg.appendChild(t);
+  });
+}
+
+const narration=document.getElementById('narration'),counter=document.getElementById('counter');
+const quiz=document.getElementById('quiz'),qtext=document.getElementById('qtext'),qopts=document.getElementById('qopts'),reveal=document.getElementById('reveal');
+const playBtn=document.getElementById('play'),speed=document.getElementById('speed');
+let STEPS=[],idx=0,timer=null;
+function render(){const s=STEPS[idx];s.draw();narration.textContent=s.note||'';counter.textContent=(idx+1)+' / '+STEPS.length;
+  if(s.question)showQuestion(s.question);else quiz.hidden=true;}
+function showQuestion(q){quiz.hidden=false;qtext.textContent=q.prompt;reveal.hidden=true;qopts.innerHTML='';
+  q.options.forEach((o,i)=>{const b=document.createElement('button');b.textContent=o;
+    b.onclick=()=>{reveal.hidden=false;reveal.textContent=(i===q.answer?'✓ Correct. ':'✗ Not quite. ')+q.explain;};qopts.appendChild(b);});}
+function step(){if(idx<STEPS.length-1){idx++;render();}else pause();}
+function prev(){if(idx>0){idx--;render();}}
+function pause(){clearInterval(timer);timer=null;playBtn.textContent='▶ Play';}
+function play(){if(timer){pause();return;}playBtn.textContent='⏸ Pause';timer=setInterval(()=>{if(idx>=STEPS.length-1){pause();return;}step();},+speed.value);}
+function reset(){pause();idx=0;render();}
+document.getElementById('prev').onclick=prev;
+document.getElementById('step').onclick=()=>{pause();step();};
+document.getElementById('reset').onclick=reset;
+playBtn.onclick=play;
+
+function buildSteps(){
+  const SQ=[{id:0,x:200,y:80},{id:1,x:440,y:80},{id:2,x:440,y:280},{id:3,x:200,y:280}];
+  const SQE=[[0,1],[1,2],[2,3],[3,0]];
+  const TR=[{id:0,x:320,y:70},{id:1,x:190,y:290},{id:2,x:450,y:290}];
+  const TRE=[[0,1],[1,2],[2,0]];
+  return [
+    {draw:()=>draw({nodes:SQ,edges:SQE,colors:{}}),
+     note:"GRAPH 1 — a 4-cycle (even). Let's 2-color it. Start: paint node 0 RED."},
+    {draw:()=>draw({nodes:SQ,edges:SQE,colors:{0:'R'}}),
+     note:"Node 0 = RED. Its neighbors 1 and 3 must take the OPPOSITE color."},
+    {draw:()=>draw({nodes:SQ,edges:SQE,colors:{0:'R',1:'B',3:'B'}}),
+     note:"Neighbors 1 and 3 painted BLUE.",
+     question:{prompt:"Node 2 borders 1 and 3, both BLUE. What color must node 2 be?",
+       options:["RED","BLUE","Either — 2 is unconstrained"],answer:0,
+       explain:"2's only neighbors are 1 and 3 (both BLUE), so 2 must be the opposite: RED."}},
+    {draw:()=>draw({nodes:SQ,edges:SQE,colors:{0:'R',1:'B',2:'R',3:'B'}}),
+     note:"Node 2 = RED. Check every edge: 0-1 R/B, 1-2 B/R, 2-3 R/B, 3-0 B/R — no same-color edge. BIPARTITE ✓"},
+    {draw:()=>draw({nodes:TR,edges:TRE,colors:{}}),
+     note:"GRAPH 2 — a triangle (3-cycle, ODD). Same procedure. Paint node 0 RED."},
+    {draw:()=>draw({nodes:TR,edges:TRE,colors:{0:'R'}}),
+     note:"0 = RED. Neighbor 1 must be BLUE."},
+    {draw:()=>draw({nodes:TR,edges:TRE,colors:{0:'R',1:'B'}}),
+     note:"1 = BLUE. Now node 2 borders BOTH 0 (RED) and 1 (BLUE).",
+     question:{prompt:"Node 2 neighbors 0 (RED) and 1 (BLUE). What happens when you try to color it?",
+       options:["Color it RED — all fine","No color works — a conflict is forced","Color it BLUE — all fine"],answer:1,
+       explain:"Edge 1-2 forces 2 to be RED (opposite of BLUE 1). But then edge 2-0 joins RED 2 with RED 0. No legal color exists — the odd cycle breaks 2-coloring."}},
+    {draw:()=>draw({nodes:TR,edges:TRE,colors:{0:'R',1:'B',2:'R'},conflict:[2,0]}),
+     note:"2 forced RED by edge 1-2. But edge 2-0 now links RED-RED (highlighted). CONFLICT. Odd cycle ⇒ NOT bipartite."}
+  ];
+}
+STEPS=buildSteps();render();
+</script>
+</body>
+</html>

@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Variable Window (Shrinkable) — Minimum Size Subarray Sum</title>
+<style>
+  body{margin:0;background:#15151f;color:#eee;font:15px/1.5 -apple-system,Segoe UI,Roboto,sans-serif}
+  .wrap{max-width:760px;margin:0 auto;padding:24px}
+  h1{font-size:20px;margin:0 0 4px}
+  .desc{color:#aaa;margin:0 0 16px}
+  #stage{background:#1d1d2a;border:1px solid #333;border-radius:10px}
+  svg{width:100%;height:auto;display:block}
+  .narration{min-height:24px;margin:12px 0;color:#cfcfe0}
+  .controls{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  button{background:#2b2b3a;color:#eee;border:1px solid #555;border-radius:6px;padding:6px 12px;cursor:pointer}
+  button:hover{border-color:#e0b341}
+  .counter{margin-left:auto;color:#888}
+  .quiz{margin-top:16px;background:#1d1d2a;border:1px solid #3a3a4a;border-radius:10px;padding:14px}
+  .quiz .q{font-weight:600;margin-bottom:8px}
+  .quiz button{margin:4px 6px 4px 0}
+  .reveal{margin-top:10px;color:#cfcfe0}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Variable Window (Shrinkable): Minimum Size Subarray Sum ≥ target</h1>
+  <p class="desc">nums = [2,3,1,2,4,3], target = 7. Grow R until the window is valid (sum ≥ target); then, while it's STILL valid, keep shrinking L to hunt for something smaller.</p>
+  <div id="stage"><svg id="svg" viewBox="0 0 640 260"></svg></div>
+  <div class="narration" id="narration">—</div>
+  <div class="controls">
+    <button id="prev">◀ Prev</button>
+    <button id="play">▶ Play</button>
+    <button id="step">Step ▶|</button>
+    <button id="reset">⟲ Reset</button>
+    <label>Speed <input id="speed" type="range" min="300" max="1600" value="1000"></label>
+    <span class="counter" id="counter"></span>
+  </div>
+  <div class="quiz" id="quiz" hidden>
+    <div class="q" id="qtext"></div>
+    <div id="qopts"></div>
+    <div class="reveal" id="reveal" hidden></div>
+  </div>
+</div>
+<script>
+const SVG="http://www.w3.org/2000/svg";
+const svg=document.getElementById('svg');
+function el(t,a){const e=document.createElementNS(SVG,t);for(const k in a)e.setAttribute(k,a[k]);return e;}
+function clear(){while(svg.firstChild)svg.removeChild(svg.firstChild);}
+const COL={idle:'#2b2b3a',idleStroke:'#666',visited:'#3fb950',current:'#e0b341',curStroke:'#ffd75e',edge:'#7a7a8c',text:'#fff',valid:'#3fb950',invalid:'#e05353'};
+
+function drawArray(a){
+  clear(); const bw=52,bh=44,gap=8,x0=40,y0=90;
+  a.values.forEach((v,i)=>{
+    const x=x0+i*(bw+gap), y=y0;
+    const hi=a.highlight&&a.highlight.has(i);
+    svg.appendChild(el('rect',{x,y,width:bw,height:bh,rx:6,
+      fill:hi?COL.current:COL.idle,stroke:hi?COL.curStroke:COL.idleStroke,'stroke-width':2}));
+    const t=el('text',{x:x+bw/2,y:y+bh/2+5,'text-anchor':'middle',fill:COL.text,'font-size':16});t.textContent=v;svg.appendChild(t);
+    const ix=el('text',{x:x+bw/2,y:y-8,'text-anchor':'middle',fill:'#888','font-size':11});ix.textContent=i;svg.appendChild(ix);
+  });
+  for(const name in (a.pointers||{})){const i=a.pointers[name];
+    const x=x0+i*(bw+gap)+bw/2, y=y0-26;
+    const p=el('text',{x,y,'text-anchor':'middle',fill:COL.current,'font-size':13,'font-weight':'700'});p.textContent=name;svg.appendChild(p);}
+  const validColor=a.valid?COL.valid:COL.invalid;
+  const info=el('text',{x:x0,y:y0+bh+40,'font-size':13,fill:validColor});
+  info.textContent='sum: '+a.sum+' ('+(a.valid?'valid ≥ 7':'invalid < 7')+')    minLen: '+(a.minLen==null?'∞':a.minLen); svg.appendChild(info);
+}
+
+const narration=document.getElementById('narration'),counter=document.getElementById('counter');
+const quiz=document.getElementById('quiz'),qtext=document.getElementById('qtext'),qopts=document.getElementById('qopts'),reveal=document.getElementById('reveal');
+const playBtn=document.getElementById('play'),speed=document.getElementById('speed');
+let STEPS=[],idx=0,timer=null;
+function render(){const s=STEPS[idx];s.draw();narration.textContent=s.note||'';counter.textContent=(idx+1)+' / '+STEPS.length;
+  if(s.question)showQuestion(s.question);else quiz.hidden=true;}
+function showQuestion(q){quiz.hidden=false;qtext.textContent=q.prompt;reveal.hidden=true;qopts.innerHTML='';
+  q.options.forEach((o,i)=>{const b=document.createElement('button');b.textContent=o;
+    b.onclick=()=>{reveal.hidden=false;reveal.textContent=(i===q.answer?'✓ Correct. ':'✗ Not quite. ')+q.explain;};qopts.appendChild(b);});}
+function step(){if(idx<STEPS.length-1){idx++;render();}else pause();}
+function prev(){if(idx>0){idx--;render();}}
+function pause(){clearInterval(timer);timer=null;playBtn.textContent='▶ Play';}
+function play(){if(timer){pause();return;}playBtn.textContent='⏸ Pause';timer=setInterval(()=>{if(idx>=STEPS.length-1){pause();return;}step();},+speed.value);}
+function reset(){pause();idx=0;render();}
+document.getElementById('prev').onclick=prev;
+document.getElementById('step').onclick=()=>{pause();step();};
+document.getElementById('reset').onclick=reset;
+playBtn.onclick=play;
+
+function buildSteps(){
+  const vals=[2,3,1,2,4,3], target=7;
+  const win=(L,R)=>{const s=new Set();for(let i=L;i<=R;i++)s.add(i);return s;};
+  const frames=[
+    {L:0,R:0,sum:2,minLen:null,note:"Expand: add nums[0]=2. sum=2 < 7 — not valid yet, keep growing."},
+    {L:0,R:1,sum:5,minLen:null,note:"Expand: add nums[1]=3. sum=5 < 7 — still not valid."},
+    {L:0,R:2,sum:6,minLen:null,note:"Expand: add nums[2]=1. sum=6 < 7 — still not valid."},
+    {L:0,R:3,sum:8,minLen:4,note:"Expand: add nums[3]=2. sum=8 ≥ 7 — valid! Record minLen = window size = 4 ([0,3])."},
+    {L:1,R:3,sum:6,minLen:4,note:"It's valid, so try shrinking: drop nums[0]=2. sum=6 < 7 — that broke validity. Stop shrinking, go back to expanding."},
+    {L:1,R:4,sum:10,minLen:4,note:"Expand: add nums[4]=4. sum=10 ≥ 7 — valid again. Window size 4 ([1,4]) — ties the record."},
+    {L:2,R:4,sum:7,minLen:3,
+     note:"Shrink: drop nums[1]=3. sum=7 — STILL ≥ 7! minLen improves to 3 (window [2,4]).",
+     question:{prompt:"sum is still ≥ target after that one shrink. What's next?",
+       options:["Stop — one shrink per expansion is the rule","Keep shrinking WHILE it's still valid — try dropping the left edge again immediately","Expand first, then reconsider shrinking later"],
+       answer:1,explain:"The shrink is a while, not an if: as long as the window stays valid, keep tightening it from the left. You only stop the moment shrinking would break validity."}},
+    {L:3,R:4,sum:6,minLen:3,note:"Shrink again (per that rule): drop nums[2]=1. sum=6 < 7 — now invalid. Stop shrinking, resume expanding."},
+    {L:3,R:5,sum:9,minLen:3,note:"Expand: add nums[5]=3. sum=9 ≥ 7 — valid. Window size 3 ([3,5]) — ties the record."},
+    {L:4,R:5,sum:7,minLen:2,note:"Shrink: drop nums[3]=2. sum=7 — still valid! minLen improves to 2 (window [4,5]) — new record."},
+    {L:5,R:5,sum:3,minLen:2,note:"Shrink again: drop nums[4]=4. sum=3 < 7 — invalid. Stop; array is exhausted too."},
+    {L:5,R:5,sum:3,minLen:2,note:"Done. minLen = 2, from window [4,5] = [4,3]. Every element still entered once and left at most once — O(n) total, even though shrinking sometimes fires more than once per expansion."}
+  ];
+  return frames.map(f=>({draw:()=>drawArray({values:vals,pointers:{L:f.L,R:f.R},highlight:win(f.L,f.R),sum:f.sum,minLen:f.minLen,valid:f.sum>=target}),note:f.note,question:f.question}));
+}
+STEPS=buildSteps();render();
+</script>
+</body>
+</html>

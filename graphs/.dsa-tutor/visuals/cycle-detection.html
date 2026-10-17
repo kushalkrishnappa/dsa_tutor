@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Cycle Detection — 3-Color DFS (directed)</title>
+<style>
+  body{margin:0;background:#15151f;color:#eee;font:15px/1.5 -apple-system,Segoe UI,Roboto,sans-serif}
+  .wrap{max-width:760px;margin:0 auto;padding:24px}
+  h1{font-size:20px;margin:0 0 4px}
+  .desc{color:#aaa;margin:0 0 16px}
+  #stage{background:#1d1d2a;border:1px solid #333;border-radius:10px}
+  svg{width:100%;height:auto;display:block}
+  .narration{min-height:24px;margin:12px 0;color:#cfcfe0}
+  .controls{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  button{background:#2b2b3a;color:#eee;border:1px solid #555;border-radius:6px;padding:6px 12px;cursor:pointer}
+  button:hover{border-color:#e0b341}
+  .counter{margin-left:auto;color:#888}
+  .quiz{margin-top:16px;background:#1d1d2a;border:1px solid #3a3a4a;border-radius:10px;padding:14px}
+  .quiz .q{font-weight:600;margin-bottom:8px}
+  .quiz button{margin:4px 6px 4px 0}
+  .reveal{margin-top:10px;color:#cfcfe0}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Cycle Detection — 3-Color DFS (directed graph)</h1>
+  <p class="desc">White = unseen · Gray = on the current DFS path (recursion stack) · Black = fully explored. A directed graph has a cycle <b>iff</b> DFS finds an edge to a <b>GRAY</b> node — a "back edge." Watch the colors flip, and predict at the two prompts.</p>
+  <div id="stage"><svg id="svg" viewBox="0 0 640 360"></svg></div>
+  <div class="narration" id="narration">—</div>
+  <div class="controls">
+    <button id="prev">◀ Prev</button>
+    <button id="play">▶ Play</button>
+    <button id="step">Step ▶|</button>
+    <button id="reset">⟲ Reset</button>
+    <label>Speed <input id="speed" type="range" min="300" max="1600" value="900"></label>
+    <span class="counter" id="counter"></span>
+  </div>
+  <div class="quiz" id="quiz" hidden>
+    <div class="q" id="qtext"></div>
+    <div id="qopts"></div>
+    <div class="reveal" id="reveal" hidden></div>
+  </div>
+</div>
+<script>
+/* ===== infrastructure: drawing helpers ===== */
+const SVG="http://www.w3.org/2000/svg";
+const svg=document.getElementById('svg');
+function el(t,a){const e=document.createElementNS(SVG,t);for(const k in a)e.setAttribute(k,a[k]);return e;}
+function clear(){while(svg.firstChild)svg.removeChild(svg.firstChild);}
+const COL={idle:'#2b2b3a',idleStroke:'#666',visited:'#3fb950',current:'#e0b341',curStroke:'#ffd75e',edge:'#7a7a8c',text:'#fff'};
+
+/* ===== infrastructure: step engine + questions (do not edit) ===== */
+const narration=document.getElementById('narration'),counter=document.getElementById('counter');
+const quiz=document.getElementById('quiz'),qtext=document.getElementById('qtext'),qopts=document.getElementById('qopts'),reveal=document.getElementById('reveal');
+const playBtn=document.getElementById('play'),speed=document.getElementById('speed');
+let STEPS=[],idx=0,timer=null;
+function render(){const s=STEPS[idx];s.draw();narration.textContent=s.note||'';counter.textContent=(idx+1)+' / '+STEPS.length;
+  if(s.question)showQuestion(s.question);else quiz.hidden=true;}
+function showQuestion(q){quiz.hidden=false;qtext.textContent=q.prompt;reveal.hidden=true;qopts.innerHTML='';
+  q.options.forEach((o,i)=>{const b=document.createElement('button');b.textContent=o;
+    b.onclick=()=>{reveal.hidden=false;reveal.textContent=(i===q.answer?'✓ Correct. ':'✗ Not quite. ')+q.explain;};qopts.appendChild(b);});}
+function step(){if(idx<STEPS.length-1){idx++;render();}else pause();}
+function prev(){if(idx>0){idx--;render();}}
+function pause(){clearInterval(timer);timer=null;playBtn.textContent='▶ Play';}
+function play(){if(timer){pause();return;}playBtn.textContent='⏸ Pause';timer=setInterval(()=>{if(idx>=STEPS.length-1){pause();return;}step();},+speed.value);}
+function reset(){pause();idx=0;render();}
+document.getElementById('prev').onclick=prev;
+document.getElementById('step').onclick=()=>{pause();step();};
+document.getElementById('reset').onclick=reset;
+playBtn.onclick=play;
+
+/* ===== EDIT BELOW: define the lesson ===== */
+const NODES=[{id:0,x:320,y:45},{id:1,x:200,y:155},{id:2,x:200,y:275},{id:3,x:455,y:155},{id:4,x:455,y:275}];
+const EDGES=[[0,3],[0,1],[3,4],[1,4],[1,2],[2,0]];
+const posOf={}; NODES.forEach(n=>posOf[n.id]=n);
+const NC={
+  white:{f:'#c7c7d1',s:'#8a8a9a',t:'#111'},
+  gray :{f:'#e0b341',s:'#ffd75e',t:'#1a1a1a'},
+  black:{f:'#20202a',s:'#4a4a5a',t:'#9a9aac'}
+};
+
+function drawDi(st){
+  clear();
+  const defs=el('defs',{});
+  defs.innerHTML='<marker id="ah" markerWidth="10" markerHeight="10" refX="8.5" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z" fill="#8b8b9e"/></marker>'+
+                 '<marker id="ahy" markerWidth="10" markerHeight="10" refX="8.5" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z" fill="#ffd75e"/></marker>'+
+                 '<marker id="ahr" markerWidth="10" markerHeight="10" refX="8.5" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z" fill="#ff5c5c"/></marker>';
+  svg.appendChild(defs);
+  const colors=st.colors||{};
+  EDGES.forEach(([a,b])=>{
+    const p=posOf[a],q=posOf[b],dx=q.x-p.x,dy=q.y-p.y,len=Math.hypot(dx,dy),ux=dx/len,uy=dy/len,r=23;
+    const x1=p.x+ux*r,y1=p.y+uy*r,x2=q.x-ux*r,y2=q.y-uy*r;
+    const isBack=st.backEdge&&st.backEdge[0]===a&&st.backEdge[1]===b;
+    const isExam=st.examine&&st.examine[0]===a&&st.examine[1]===b;
+    svg.appendChild(el('line',{x1,y1,x2,y2,
+      stroke:isBack?'#ff5c5c':(isExam?'#ffd75e':'#7a7a8c'),
+      'stroke-width':isBack?3.5:(isExam?3:2),
+      'stroke-dasharray':(isExam&&!isBack)?'5,4':'0',
+      'marker-end':isBack?'url(#ahr)':(isExam?'url(#ahy)':'url(#ah)')}));
+  });
+  NODES.forEach(n=>{
+    const c=colors[n.id]||'white',col=NC[c],isCur=st.current===n.id;
+    if(isCur) svg.appendChild(el('circle',{cx:n.x,cy:n.y,r:28,fill:'none',stroke:'#ff5c5c','stroke-width':2}));
+    svg.appendChild(el('circle',{cx:n.x,cy:n.y,r:23,fill:col.f,stroke:col.s,'stroke-width':2}));
+    const t=el('text',{x:n.x,y:n.y+6,'text-anchor':'middle',fill:col.t,'font-size':16,'font-weight':'700'});
+    t.textContent=n.id;svg.appendChild(t);
+  });
+  const lg=[['#c7c7d1','White = unseen'],['#e0b341','Gray = on path'],['#20202a','Black = done']];
+  lg.forEach((L,i)=>{const y=340,x=40+i*205;
+    svg.appendChild(el('circle',{cx:x,cy:y,r:8,fill:L[0],stroke:'#888','stroke-width':1}));
+    const t=el('text',{x:x+14,y:y+4,fill:'#bbb','font-size':11.5});t.textContent=L[1];svg.appendChild(t);});
+}
+
+function buildSteps(){
+  const S=[];
+  const push=(colors,current,note,extra)=>S.push(Object.assign({draw:()=>drawDi(Object.assign({colors,current},extra)),note},extra&&extra.question?{question:extra.question}:{}));
+  push({}, null, "Directed graph. We run DFS from node 0. Everyone starts WHITE (unseen).");
+  push({0:'gray'}, 0, "Enter 0 → paint it GRAY. It's now on our path (the stack: [0]).");
+  push({0:'gray',3:'gray'}, 3, "0→3: enter 3 → GRAY. Stack: [0, 3].");
+  push({0:'gray',3:'gray',4:'gray'}, 4, "3→4: enter 4 → GRAY. Stack: [0, 3, 4].");
+  push({0:'gray',3:'gray',4:'black'}, 4, "4 has no out-edges → finished → paint it BLACK, pop it off. Stack: [0, 3].");
+  push({0:'gray',3:'black',4:'black'}, 3, "Back at 3, nothing left → 3 done → BLACK. Stack: [0].");
+  push({0:'gray',1:'gray',3:'black',4:'black'}, 1, "Back at 0. Next edge 0→1: enter 1 → GRAY. Stack: [0, 1].");
+  push({0:'gray',1:'gray',3:'black',4:'black'}, 1,
+    "1 examines its edge 1→4. Node 4 is BLACK. Predict before revealing:",
+    {examine:[1,4], question:{
+      prompt:"Node 1 → node 4, and 4 is BLACK (already finished). Does this edge mean there's a cycle?",
+      options:["Yes — we've reached 4 before","No — black = done, not on our current path"],
+      answer:1,
+      explain:"4 is finished and popped (black). Reaching a done node is just two paths converging — NOT a loop back onto the path we're currently on."}});
+  push({0:'gray',1:'gray',2:'gray',3:'black',4:'black'}, 2, "1→2: enter 2 → GRAY. Stack: [0, 1, 2].");
+  push({0:'gray',1:'gray',2:'gray',3:'black',4:'black'}, 2,
+    "2 examines its edge 2→0. Node 0 is GRAY. Predict:",
+    {examine:[2,0], question:{
+      prompt:"Node 2 → node 0, and 0 is GRAY (still on our path). Cycle or not?",
+      options:["Yes — a back edge to a node still on the stack","No — just skip it like ordinary visited"],
+      answer:0,
+      explain:"YES. 0 is gray = an ancestor still in progress on our current path. An edge back to it closes the loop 0→1→2→0. That's the cycle."}});
+  push({0:'gray',1:'gray',2:'gray',3:'black',4:'black'}, 2,
+    "BACK EDGE to a GRAY node → CYCLE FOUND: 0 → 1 → 2 → 0. (In code you'd return True right here.)",
+    {backEdge:[2,0]});
+  return S;
+}
+STEPS=buildSteps();render();
+</script>
+</body>
+</html>

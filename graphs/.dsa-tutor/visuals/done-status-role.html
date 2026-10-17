@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Where is DONE actually used?</title>
+<style>
+  body{margin:0;background:#15151f;color:#eee;font:15px/1.5 -apple-system,Segoe UI,Roboto,sans-serif}
+  .wrap{max-width:760px;margin:0 auto;padding:24px}
+  h1{font-size:20px;margin:0 0 4px}
+  .desc{color:#aaa;margin:0 0 16px}
+  #stage{background:#1d1d2a;border:1px solid #333;border-radius:10px}
+  svg{width:100%;height:auto;display:block}
+  .narration{min-height:48px;margin:12px 0;color:#cfcfe0}
+  .controls{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  button{background:#2b2b3a;color:#eee;border:1px solid #555;border-radius:6px;padding:6px 12px;cursor:pointer}
+  button:hover{border-color:#e0b341}
+  .counter{margin-left:auto;color:#888}
+  .quiz{margin-top:16px;background:#1d1d2a;border:1px solid #3a3a4a;border-radius:10px;padding:14px}
+  .quiz .q{font-weight:600;margin-bottom:8px}
+  .quiz button{margin:4px 6px 4px 0}
+  .reveal{margin-top:10px;color:#cfcfe0}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Where is DONE actually used?</h1>
+  <p class="desc">Five acts: (1) your directed code as written, (2) the same code with <code>status[node] = DONE</code> deleted, (3) the diamond with two-way streets, (4) an undirected TREE — count how many times DONE is ever read, (5) a challenge — try to catch a BLACK neighbor in an undirected graph. Watch exactly when BLACK earns its keep — and when it's unemployed.</p>
+  <div id="stage"><svg id="svg" viewBox="0 0 640 380"></svg></div>
+  <div class="narration" id="narration">—</div>
+  <div class="controls">
+    <button id="prev">◀ Prev</button>
+    <button id="play">▶ Play</button>
+    <button id="step">Step ▶|</button>
+    <button id="reset">⟲ Reset</button>
+    <label>Speed <input id="speed" type="range" min="300" max="1600" value="1100"></label>
+    <span class="counter" id="counter"></span>
+  </div>
+  <div class="quiz" id="quiz" hidden>
+    <div class="q" id="qtext"></div>
+    <div id="qopts"></div>
+    <div class="reveal" id="reveal" hidden></div>
+  </div>
+</div>
+<script>
+/* ===== infrastructure: drawing helpers ===== */
+const SVG="http://www.w3.org/2000/svg";
+const svg=document.getElementById('svg');
+function el(t,a){const e=document.createElementNS(SVG,t);for(const k in a)e.setAttribute(k,a[k]);return e;}
+function clear(){while(svg.firstChild)svg.removeChild(svg.firstChild);}
+
+/* ===== infrastructure: step engine + questions (do not edit) ===== */
+const narration=document.getElementById('narration'),counter=document.getElementById('counter');
+const quiz=document.getElementById('quiz'),qtext=document.getElementById('qtext'),qopts=document.getElementById('qopts'),reveal=document.getElementById('reveal');
+const playBtn=document.getElementById('play'),speed=document.getElementById('speed');
+let STEPS=[],idx=0,timer=null;
+function render(){const s=STEPS[idx];s.draw();narration.textContent=s.note||'';counter.textContent=(idx+1)+' / '+STEPS.length;
+  if(s.question)showQuestion(s.question);else quiz.hidden=true;}
+function showQuestion(q){quiz.hidden=false;qtext.textContent=q.prompt;reveal.hidden=true;qopts.innerHTML='';
+  q.options.forEach((o,i)=>{const b=document.createElement('button');b.textContent=o;
+    b.onclick=()=>{reveal.hidden=false;reveal.textContent=(i===q.answer?'✓ Correct. ':'✗ Not quite. ')+q.explain;};qopts.appendChild(b);});}
+function step(){if(idx<STEPS.length-1){idx++;render();if(STEPS[idx].question)pause();}else pause();}
+function prev(){if(idx>0){idx--;render();}}
+function pause(){clearInterval(timer);timer=null;playBtn.textContent='▶ Play';}
+function play(){if(timer){pause();return;}playBtn.textContent='⏸ Pause';timer=setInterval(()=>{if(idx>=STEPS.length-1){pause();return;}step();},+speed.value);}
+function reset(){pause();idx=0;render();}
+document.getElementById('prev').onclick=prev;
+document.getElementById('step').onclick=()=>{pause();step();};
+document.getElementById('reset').onclick=reset;
+playBtn.onclick=play;
+
+/* ===== EDIT BELOW: define the lesson ===== */
+const POS={0:{x:320,y:96},1:{x:185,y:192},2:{x:455,y:192},3:{x:320,y:288}};
+const EDGES=[[0,1],[0,2],[1,3],[2,3]];
+const NODE_R=22;
+const FILL={w:'#1d1d2a',g:'#a9a9b8',b:'#000000'};
+const STROKE={w:'#666',g:'#d5d5e2',b:'#888'};
+const TXT={w:'#ddd',g:'#15151f',b:'#999'};
+
+function drawScene(o){
+  clear();
+  const defs=el('defs',{});
+  defs.innerHTML='<marker id="arr" markerWidth="10" markerHeight="10" refX="7" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z" fill="#7a7a8c"/></marker>'
+    +'<marker id="arrHi" markerWidth="10" markerHeight="10" refX="7" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z" fill="#e0b341"/></marker>'
+    +'<marker id="arrRed" markerWidth="10" markerHeight="10" refX="7" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z" fill="#f85149"/></marker>';
+  svg.appendChild(defs);
+
+  // act banner
+  const b=el('text',{x:16,y:26,fill:'#e0b341','font-size':13,'font-weight':'700'});
+  b.textContent=o.banner; svg.appendChild(b);
+
+  // legend (top right)
+  const leg=[['w','WHITE = unseen'],['g','GRAY = on the stove'],['b','BLACK = served']];
+  leg.forEach((L,i)=>{
+    const y=20+i*19;
+    svg.appendChild(el('circle',{cx:472,cy:y,r:6,fill:FILL[L[0]],stroke:STROKE[L[0]],'stroke-width':1.5}));
+    const t=el('text',{x:484,y:y+4,fill:'#9a9aad','font-size':10.5}); t.textContent=L[1]; svg.appendChild(t);
+  });
+
+  // edges
+  const NP=o.nodes||POS, NE=o.edges||EDGES;
+  NE.forEach(([a,c])=>{
+    const A=NP[a],B=NP[c];
+    const dx=B.x-A.x,dy=B.y-A.y,len=Math.hypot(dx,dy),ux=dx/len,uy=dy/len;
+    const endTrim=o.dir?NODE_R+8:NODE_R+2;
+    const x1=A.x+ux*(NODE_R+2),y1=A.y+uy*(NODE_R+2);
+    const x2=B.x-ux*endTrim,y2=B.y-uy*endTrim;
+    const isHi=o.hi&&o.hi[0]===a&&o.hi[1]===c;
+    const col=isHi?(o.hiCol==='red'?'#f85149':'#e0b341'):'#7a7a8c';
+    const attrs={x1,y1,x2,y2,stroke:col,'stroke-width':isHi?3.5:2};
+    if(o.dir)attrs['marker-end']=isHi?(o.hiCol==='red'?'url(#arrRed)':'url(#arrHi)'):'url(#arr)';
+    svg.appendChild(el('line',attrs));
+  });
+
+  // nodes
+  Object.keys(NP).forEach(id=>{
+    const st=(o.st&&o.st[id])||'w', p=NP[id];
+    if(String(o.cur)===id) svg.appendChild(el('circle',{cx:p.x,cy:p.y,r:NODE_R+6,fill:'none',stroke:'#e0b341','stroke-width':2.5}));
+    svg.appendChild(el('circle',{cx:p.x,cy:p.y,r:NODE_R,fill:FILL[st],stroke:STROKE[st],'stroke-width':2}));
+    const t=el('text',{x:p.x,y:p.y+5,'text-anchor':'middle',fill:TXT[st],'font-size':14,'font-weight':'700'});
+    t.textContent=id; svg.appendChild(t);
+    if(o.tags&&o.tags[id]){
+      const tg=el('text',{x:p.x,y:p.y+NODE_R+16,'text-anchor':'middle',fill:'#f0a05a','font-size':10,'font-style':'italic'});
+      tg.textContent=o.tags[id]; svg.appendChild(tg);
+    }
+  });
+
+  // verdict banner
+  if(o.alarm){
+    const t=el('text',{x:320,y:362,'text-anchor':'middle',fill:o.alarm[1],'font-size':16,'font-weight':'700'});
+    t.textContent=o.alarm[0]; svg.appendChild(t);
+  }
+}
+
+function buildSteps(){
+  const A1='ACT 1 — your exact code, WITH  status[node] = DONE';
+  const A2='ACT 2 — same code, DONE line DELETED';
+  const A3='ACT 3 — same diamond, TWO-WAY streets';
+  const S=[];
+  const P=o=>({draw:()=>drawScene(o)});
+
+  // ---- ACT 1 ----
+  S.push({...P({banner:A1,dir:1,st:{}}),
+    note:"Directed diamond {0:[1,2], 1:[3], 2:[3], 3:[]}. Two one-way roads converge on 3 — a DAG, no loop anywhere. Correct answer: NO cycle."});
+  S.push({...P({banner:A1,dir:1,st:{0:'g'},cur:0}),
+    note:"dfs(0): status[0] = ON_STACK. Node 0 goes on the stove (GRAY)."});
+  S.push({...P({banner:A1,dir:1,st:{0:'g',1:'g'},cur:1,hi:[0,1]}),
+    note:"0 examines neighbor 1: WHITE → recurse. dfs(1): 1 goes GRAY."});
+  S.push({...P({banner:A1,dir:1,st:{0:'g',1:'g',3:'g'},cur:3,hi:[1,3]}),
+    note:"1 examines 3: WHITE → recurse. dfs(3): 3 goes GRAY. 3 has no outgoing edges — its neighbor loop ends instantly."});
+  S.push({...P({banner:A1,dir:1,st:{0:'g',1:'b',3:'b'},cur:0}),
+    note:"status[3] = DONE — pan OFF the stove, 3 turns BLACK. Then 1's loop is finished too → 1 turns BLACK. Control returns to 0's loop."});
+  S.push({...P({banner:A1,dir:1,st:{0:'g',1:'b',3:'b',2:'g'},cur:2,hi:[0,2]}),
+    note:"0 examines 2: WHITE → recurse. dfs(2): 2 goes GRAY. Its neighbor list is [3]..."});
+  S.push({...P({banner:A1,dir:1,st:{0:'g',1:'b',3:'b',2:'g'},cur:2,hi:[2,3]}),
+    note:"★ THE MOMENT. 2 examines neighbor 3 — the second road into 3. What does your code do?",
+    question:{prompt:"status[3] is DONE. Which line of your neighbor loop fires?",
+      options:["if status[nb]==ON_STACK → return True (cycle!)",
+               "if status[nb]==NOT_EXPLORED → recurse into 3",
+               "Neither — both ifs are False; the loop silently moves on"],
+      answer:2,
+      explain:"THIS is where DONE is used — not by being tested for, but by making BOTH tests false. BLACK is how a node stops testing positive for GRAY. That silent skip is the whole job."}});
+  S.push({...P({banner:A1,dir:1,st:{0:'b',1:'b',3:'b',2:'b'},alarm:['returns False — no cycle. CORRECT ✓','#3fb950']}),
+    note:"Both ifs false → skip 3. 2 finishes, 0 finishes, everything BLACK. DONE was 'used' exactly once — at the moment you just watched."});
+
+  // ---- ACT 2 ----
+  S.push({...P({banner:A2,dir:1,st:{}}),
+    note:"Same graph. But now the line  status[node] = DONE  is deleted. Finished nodes have no way to leave the stove — they stay GRAY forever."});
+  S.push({...P({banner:A2,dir:1,st:{0:'g',1:'g',3:'g'},cur:0,tags:{1:'finished — still gray!',3:'finished — still gray!'}}),
+    note:"Fast-forward: 0→1→3 fully explored. 1 and 3 are FINISHED... but nobody took their pans off. To the code they still look ON_STACK."});
+  S.push({...P({banner:A2,dir:1,st:{0:'g',1:'g',3:'g',2:'g'},cur:2,hi:[2,3],hiCol:'red',tags:{3:'finished — still gray!'},alarm:['returns True — \"cycle\" in a DAG. FALSE POSITIVE ✗','#f85149']}),
+    note:"2 examines 3: status[3]==ON_STACK → return True. The smoke alarm fires on a dish served an hour ago. One deleted line, and the algorithm is wrong."});
+  S.push({...P({banner:A2,dir:1,st:{0:'g',1:'g',3:'g',2:'g'},alarm:['DONE = the UN-GRAYING','#e0b341']}),
+    note:"Moral: DONE is never read by name. Its job is un-graying — it keeps GRAY meaning 'still on my current path' instead of 'ever visited'. Without it, gray rots into a plain visited set, which cannot detect cycles."});
+
+  // ---- ACT 3 ----
+  S.push({...P({banner:A3,dir:0,st:{}}),
+    note:"Now make all four edges two-way. Look at the shape: the 'innocent convergence' is gone — 0–1–3–2–0 is a real loop. Convergence needs one-way streets; two roads meeting on a two-way map IS a cycle."});
+  S.push({...P({banner:A3,dir:0,st:{0:'g',1:'g',3:'g'},cur:3}),
+    note:"dfs(0) → dfs(1, parent 0) → dfs(3, parent 1). 3 examines neighbor 1: that's its PARENT — the U-turn edge. Skip."});
+  S.push({...P({banner:A3,dir:0,st:{0:'g',1:'g',3:'g',2:'g'},cur:2,hi:[2,3]}),
+    note:"3 examines 2: WHITE → recurse. dfs(2, parent 3). 2's neighbor list: [0, 3]. 3 is the parent — skip. That leaves 0..."});
+  S.push({...P({banner:A3,dir:0,st:{0:'g',1:'g',3:'g',2:'g'},cur:2,hi:[0,2]}),
+    note:"★ THE QUESTION. 2 examines 0 — visited, and NOT 2's parent. Before revealing: what color is 0 right now?",
+    question:{prompt:"Node 0 — the visited non-parent neighbor — what is its status at this exact moment?",
+      options:["BLACK — it finished long ago",
+               "GRAY — it's an ancestor, still on the stack",
+               "WHITE — unvisited"],
+      answer:1,
+      explain:"0 is 2's great-grandparent: the whole chain 0–1–3–2 is still on the stove. In undirected DFS, a visited non-parent neighbor is ALWAYS a gray ancestor — a BLACK one is impossible (0 can't be served while its descendants cook, and the two-way door guarantees you're its descendant). So visited + parent-skip carries ALL the information; gray/black adds nothing."}});
+  S.push({...P({banner:A3,dir:0,st:{0:'g',1:'g',3:'g',2:'g'},hi:[0,2],alarm:['returns True — REAL cycle 0–1–3–2–0. CORRECT ✓','#3fb950']}),
+    note:"Verdict: directed NEEDS the un-graying (Act 1 vs Act 2). Undirected never meets a black neighbor, so DONE is unemployed there — fire it and keep a plain visited set + parent."});
+  // ---- ACT 4 ----
+  const A4='ACT 4 — undirected TREE: DONE is written, never read';
+  const TN={0:{x:320,y:96},1:{x:210,y:192},2:{x:430,y:192},3:{x:250,y:288},4:{x:355,y:288}};
+  const TE=[[0,1],[0,2],[1,3],[1,4]];
+  S.push({...P({banner:A4,dir:0,nodes:TN,edges:TE,st:{}}),
+    note:"An undirected TREE: 0—1, 0—2, 1—3, 1—4. No cycle exists. Adjacency: 0:[1,2], 1:[0,3,4], 2:[0], 3:[1], 4:[1]. Mission: watch every neighbor-examination and count how many ever look at a BLACK node."});
+  S.push({...P({banner:A4,dir:0,nodes:TN,edges:TE,st:{0:'g'},cur:0}),
+    note:"dfs(0): 0 goes GRAY."});
+  S.push({...P({banner:A4,dir:0,nodes:TN,edges:TE,st:{0:'g',1:'g'},cur:1,hi:[0,1]}),
+    note:"0 examines 1: WHITE → recurse. dfs(1, parent 0). Then 1 examines 0: visited — but it's the PARENT → U-turn skip. And note 0's color at that moment: GRAY. Ancestors are always still cooking."});
+  S.push({...P({banner:A4,dir:0,nodes:TN,edges:TE,st:{0:'g',1:'g',3:'g'},cur:3,hi:[1,3]}),
+    note:"1 examines 3: WHITE → recurse. 3's only neighbor is 1: parent (GRAY) → skip. 3's loop ends."});
+  S.push({...P({banner:A4,dir:0,nodes:TN,edges:TE,st:{0:'g',1:'g',3:'b',4:'g'},cur:4,hi:[1,4],tags:{3:'sealed off — no unspent edge leads here'}}),
+    note:"3 → BLACK. 1 examines 4: WHITE → recurse. 4 examines 1: parent (GRAY) → skip. Notice: nobody can ever look at black 3 again — its only edge, 1—3, was already spent recruiting it."});
+  S.push({...P({banner:A4,dir:0,nodes:TN,edges:TE,st:{0:'g',1:'b',3:'b',4:'b'},cur:0}),
+    note:"★ 4 finishes, then 1's loop ends → 1 BLACK. Control returns to 0, which still has neighbor 2 to examine. Predict before stepping on:",
+    question:{prompt:"1, 3, 4 are BLACK now. During the REST of this run, will any check ever examine a BLACK node?",
+      options:["Yes — 2 will see black 1 through some edge",
+               "Yes — 0 re-examines 1 when its loop resumes",
+               "No — every edge into the black region is already spent; 2's only edge leads to its gray parent 0"],
+      answer:2,
+      explain:"0's edge to 1 was consumed back when 1 was WHITE (a loop moves to the NEXT neighbor, it never re-examines). 2's only edge is 2—0: its parent, gray. A finished subtree is SEALED: in an undirected graph the one edge that enters it is the tree edge that was already used to enter it. That is why your DONE branch can never fire."}});
+  S.push({...P({banner:A4,dir:0,nodes:TN,edges:TE,st:{0:'b',1:'b',2:'b',3:'b',4:'b'},alarm:['status = DONE: written 5 times, read 0 times','#e0b341']}),
+    note:"Full run done, no cycle — correct. Tally every already-visited neighbor that was examined: 1→0, 3→1, 4→1, 2→0. Every single one was the PARENT, and every single one was GRAY. No check ever laid eyes on a BLACK node."});
+
+  // ---- ACT 5 ----
+  const A5='ACT 5 — challenge: catch a BLACK neighbor (you can’t)';
+  const RN={0:{x:320,y:110},1:{x:225,y:275},2:{x:415,y:275}};
+  const RE=[[0,1],[1,2],[0,2]];
+  S.push({...P({banner:A5,dir:0,nodes:RN,edges:RE,st:{}}),
+    note:"Challenge: build an undirected run where some node examines a BLACK non-parent neighbor. We need node 1 to FINISH before node 2 looks at it — and an edge 1—2 so 2 can look at all. Attempt: triangle 0—1—2—0."});
+  S.push({...P({banner:A5,dir:0,nodes:RN,edges:RE,st:{0:'g',1:'g'},cur:1,hi:[0,1]}),
+    note:"dfs(0): GRAY. 0 examines 1: WHITE → recurse. For our plan, 1 must now finish quickly... but look at 1's doors: [0, 2]."});
+  S.push({...P({banner:A5,dir:0,nodes:RN,edges:RE,st:{0:'g',1:'g',2:'g'},cur:2,hi:[1,2]}),
+    note:"1 examines 0: parent → skip. 1 examines 2: WHITE → recurse. THE PLAN JUST DIED: the very door 2 needed for peeking at 1 (edge 1—2) instead recruited 2 as 1's DESCENDANT — and 1 cannot go BLACK until its descendant finishes."});
+  S.push({...P({banner:A5,dir:0,nodes:RN,edges:RE,st:{0:'g',1:'g',2:'g'},cur:2,hi:[0,2]}),
+    note:"★ 2 examines 0: visited, NOT parent — and 0 is GRAY (ancestor) → CYCLE, alarm fires while 1 is still cooking. Nothing ever went black.",
+    question:{prompt:"Could reordering the adjacency lists (say 0 visits 2 first) let 2 catch 1 while it's BLACK?",
+      options:["Yes — go 0→2 first, let 1 finish, then 2 peeks at 1",
+               "No — whichever order you pick, the 1—2 edge either makes one the other's descendant, or the alarm fires on a gray ancestor first"],
+      answer:1,
+      explain:"Try it: 0→2 (parent 0), 2 examines 1: WHITE → recurse into 1; then 1 examines 0: gray non-parent → alarm. Perfectly symmetric. To see a neighbor BLACK, it must finish while you haven't started — but its two-way door to you forbids that: while cooking it would have either pulled you in (descendants finish first) or seen you gray (alarm). Time travel required."}});
+  S.push({...P({banner:A5,dir:0,nodes:RN,edges:RE,st:{0:'g',1:'g',2:'g'},hi:[0,2],alarm:['BLACK encounters are impossible on two-way streets','#3fb950']}),
+    note:"That's the theorem, held in your own hands: undirected DFS can NEVER examine a black non-parent neighbor. So a plain visited set + parent-skip loses nothing — refactor with conviction."});
+
+  return S;
+}
+STEPS=buildSteps();render();
+</script>
+</body>
+</html>

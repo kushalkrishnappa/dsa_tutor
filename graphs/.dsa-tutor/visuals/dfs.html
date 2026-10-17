@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Depth-First Search — the deep dive</title>
+<style>
+  body{margin:0;background:#15151f;color:#eee;font:15px/1.5 -apple-system,Segoe UI,Roboto,sans-serif}
+  .wrap{max-width:760px;margin:0 auto;padding:24px}
+  h1{font-size:20px;margin:0 0 4px}
+  .desc{color:#aaa;margin:0 0 16px}
+  #stage{background:#1d1d2a;border:1px solid #333;border-radius:10px}
+  svg{width:100%;height:auto;display:block}
+  .narration{min-height:24px;margin:12px 0;color:#cfcfe0}
+  .controls{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  button{background:#2b2b3a;color:#eee;border:1px solid #555;border-radius:6px;padding:6px 12px;cursor:pointer}
+  button:hover{border-color:#e0b341}
+  .counter{margin-left:auto;color:#888}
+  .quiz{margin-top:16px;background:#1d1d2a;border:1px solid #3a3a4a;border-radius:10px;padding:14px}
+  .quiz .q{font-weight:600;margin-bottom:8px}
+  .quiz button{margin:4px 6px 4px 0}
+  .reveal{margin-top:10px;color:#cfcfe0}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Depth-First Search — the deep dive</h1>
+  <p class="desc">DFS plunges down one path as far as it can go, then BACKTRACKS to try the next branch. A stack (LIFO) — or the call stack via recursion — drives the dive. Mnemonic: Depth = Stack (dive down, LIFO); contrast with BFS = Queue (fan out, FIFO).</p>
+  <div id="stage"><svg id="svg" viewBox="0 0 640 360"></svg></div>
+  <div class="narration" id="narration">—</div>
+  <div class="controls">
+    <button id="prev">◀ Prev</button>
+    <button id="play">▶ Play</button>
+    <button id="step">Step ▶|</button>
+    <button id="reset">⟲ Reset</button>
+    <label>Speed <input id="speed" type="range" min="300" max="1600" value="950"></label>
+    <span class="counter" id="counter"></span>
+  </div>
+  <div class="quiz" id="quiz" hidden>
+    <div class="q" id="qtext"></div>
+    <div id="qopts"></div>
+    <div class="reveal" id="reveal" hidden></div>
+  </div>
+</div>
+<script>
+/* ===== infrastructure: drawing helpers ===== */
+const SVG="http://www.w3.org/2000/svg";
+const svg=document.getElementById('svg');
+function el(t,a){const e=document.createElementNS(SVG,t);for(const k in a)e.setAttribute(k,a[k]);return e;}
+function clear(){while(svg.firstChild)svg.removeChild(svg.firstChild);}
+const COL={idle:'#2b2b3a',idleStroke:'#666',visited:'#3fb950',current:'#e0b341',curStroke:'#ffd75e',edge:'#7a7a8c',text:'#fff'};
+
+// graph: {nodes:[{id,x,y,label}], edges:[[a,b]], visited:Set, current:id}
+function drawGraph(g){
+  clear(); const pos={}; g.nodes.forEach(n=>pos[n.id]=n);
+  (g.edges||[]).forEach(([a,b])=>svg.appendChild(el('line',
+    {x1:pos[a].x,y1:pos[a].y,x2:pos[b].x,y2:pos[b].y,stroke:COL.edge,'stroke-width':2})));
+  g.nodes.forEach(n=>{
+    const v=g.visited&&g.visited.has(n.id), c=g.current===n.id;
+    svg.appendChild(el('circle',{cx:n.x,cy:n.y,r:20,
+      fill:c?COL.current:(v?COL.visited:COL.idle),
+      stroke:c?COL.curStroke:(v?COL.visited:COL.idleStroke),'stroke-width':2}));
+    const t=el('text',{x:n.x,y:n.y+5,'text-anchor':'middle',fill:COL.text,'font-size':14});
+    t.textContent=(n.label!=null?n.label:n.id); svg.appendChild(t);
+  });
+}
+
+// array (also stacks/queues via orient): {values:[], orient:'h'|'v', pointers:{name:idx}, highlight:Set}
+function drawArray(a){
+  clear(); const horiz=(a.orient||'h')==='h', bw=46,bh=40,gap=6,x0=40,y0=150;
+  a.values.forEach((v,i)=>{
+    const x=horiz?x0+i*(bw+gap):x0, y=horiz?y0:y0+i*(bh+gap);
+    const hi=a.highlight&&a.highlight.has(i);
+    svg.appendChild(el('rect',{x,y,width:bw,height:bh,rx:6,
+      fill:hi?COL.current:COL.idle,stroke:hi?COL.curStroke:COL.idleStroke,'stroke-width':2}));
+    const t=el('text',{x:x+bw/2,y:y+bh/2+5,'text-anchor':'middle',fill:COL.text,'font-size':14});t.textContent=v;svg.appendChild(t);
+    const ix=el('text',{x:x+bw/2,y:y-8,'text-anchor':'middle',fill:'#888','font-size':11});ix.textContent=i;svg.appendChild(ix);
+  });
+  for(const name in (a.pointers||{})){const i=a.pointers[name];
+    const x=horiz?x0+i*(bw+gap)+bw/2:x0-16, y=horiz?y0-26:y0+i*(bh+gap)+bh/2;
+    const p=el('text',{x,y,'text-anchor':'middle',fill:COL.current,'font-size':12});p.textContent=name;svg.appendChild(p);}
+}
+
+// 2D grid for DP tables / matrices: {cells:[[..]], highlight:Set('r,c')}
+function drawGrid(grid){
+  clear(); const cw=46,ch=34,x0=60,y0=40;
+  grid.cells.forEach((row,r)=>row.forEach((v,c)=>{
+    const x=x0+c*cw, y=y0+r*ch, hi=grid.highlight&&grid.highlight.has(r+','+c);
+    svg.appendChild(el('rect',{x,y,width:cw,height:ch,fill:hi?COL.current:COL.idle,stroke:'#555','stroke-width':1}));
+    const t=el('text',{x:x+cw/2,y:y+ch/2+4,'text-anchor':'middle',fill:COL.text,'font-size':12});t.textContent=v;svg.appendChild(t);
+  }));
+}
+
+// tree (also recursion trees): {root:{id,label,children:[]}, visited:Set, current:id}
+function layoutTree(root){
+  const nodes=[],edges=[]; let leaf=0; const dy=70,x0=50,y0=40;
+  (function rec(n,depth){
+    let mid; if(n.children&&n.children.length){const ks=n.children.map(c=>rec(c,depth+1));mid=(ks[0]+ks[ks.length-1])/2;}
+    else mid=leaf++;
+    nodes.push({id:n.id,x:x0+mid*64,y:y0+depth*dy,label:(n.label!=null?n.label:n.id)});
+    (n.children||[]).forEach(c=>edges.push([n.id,c.id])); return mid;
+  })(root,0);
+  return {nodes,edges};
+}
+function drawTree(t){const {nodes,edges}=layoutTree(t.root);drawGraph({nodes,edges,visited:t.visited,current:t.current});}
+
+// linked list: {values:[], pointer:idx}
+function drawLinkedList(ll){
+  clear(); const bw=54,bh=36,gap=34,x0=40,y0=150;
+  ll.values.forEach((v,i)=>{
+    const x=x0+i*(bw+gap), hi=ll.pointer===i;
+    svg.appendChild(el('rect',{x,y:y0,width:bw,height:bh,rx:6,fill:hi?COL.current:COL.idle,stroke:hi?COL.curStroke:COL.idleStroke,'stroke-width':2}));
+    const t=el('text',{x:x+bw/2,y:y0+bh/2+5,'text-anchor':'middle',fill:COL.text,'font-size':14});t.textContent=v;svg.appendChild(t);
+    if(i<ll.values.length-1) svg.appendChild(el('line',{x1:x+bw,y1:y0+bh/2,x2:x+bw+gap,y2:y0+bh/2,stroke:COL.edge,'stroke-width':2}));
+  });
+}
+
+/* ===== infrastructure: step engine + questions (do not edit) ===== */
+const narration=document.getElementById('narration'),counter=document.getElementById('counter');
+const quiz=document.getElementById('quiz'),qtext=document.getElementById('qtext'),qopts=document.getElementById('qopts'),reveal=document.getElementById('reveal');
+const playBtn=document.getElementById('play'),speed=document.getElementById('speed');
+let STEPS=[],idx=0,timer=null;
+function render(){const s=STEPS[idx];s.draw();narration.textContent=s.note||'';counter.textContent=(idx+1)+' / '+STEPS.length;
+  if(s.question)showQuestion(s.question);else quiz.hidden=true;}
+function showQuestion(q){quiz.hidden=false;qtext.textContent=q.prompt;reveal.hidden=true;qopts.innerHTML='';
+  q.options.forEach((o,i)=>{const b=document.createElement('button');b.textContent=o;
+    b.onclick=()=>{reveal.hidden=false;reveal.textContent=(i===q.answer?'✓ Correct. ':'✗ Not quite. ')+q.explain;};qopts.appendChild(b);});}
+function step(){if(idx<STEPS.length-1){idx++;render();}else pause();}
+function prev(){if(idx>0){idx--;render();}}
+function pause(){clearInterval(timer);timer=null;playBtn.textContent='▶ Play';}
+function play(){if(timer){pause();return;}playBtn.textContent='⏸ Pause';timer=setInterval(()=>{if(idx>=STEPS.length-1){pause();return;}step();},+speed.value);}
+function reset(){pause();idx=0;render();}
+document.getElementById('prev').onclick=prev;
+document.getElementById('step').onclick=()=>{pause();step();};
+document.getElementById('reset').onclick=reset;
+playBtn.onclick=play;
+
+/* ===== EDIT BELOW: define the lesson ===== */
+function buildSteps(){
+  // Same 6-node graph as bfs.html for direct comparison
+  const N=[{id:0,x:320,y:50},{id:1,x:200,y:160},{id:2,x:440,y:160},
+           {id:3,x:120,y:280},{id:4,x:300,y:280},{id:5,x:500,y:280}];
+  const E=[[0,1],[0,2],[1,3],[1,4],[2,4],[2,5]];
+  const g=(visited,current)=>({nodes:N,edges:E,visited,current});
+  const S=arr=>new Set(arr);
+  const steps=[];
+
+  // Step 1: Start
+  steps.push({draw:()=>drawGraph(g(S([]),0)),
+    note:"Start at node 0. DFS uses a STACK (or recursion). Push 0 and begin.   Call stack: [dfs(0)]"});
+
+  // Step 2: Visit 0, go deep to first neighbor (1)
+  // Question 1: DFS vs BFS data structure
+  steps.push({draw:()=>drawGraph(g(S([0]),0)),
+    note:"Mark 0 visited. Look at its neighbors: 1 and 2. DFS picks the FIRST unvisited neighbor (1) and dives immediately — no waiting.",
+    question:{
+      prompt:"BFS and DFS both visit node 0 first. After node 0, what is the KEY difference in which node they visit next?",
+      options:[
+        "Both visit node 1 next, so there is no difference yet.",
+        "BFS queues ALL neighbors of 0 (fan out); DFS immediately dives into the first neighbor (1) before touching 2.",
+        "DFS visits the farthest node first; BFS visits the nearest."
+      ],
+      answer:1,
+      explain:"BFS uses a Queue (FIFO) — it fans out in rings, visiting 1 AND 2 before going deeper. DFS uses a Stack/recursion (LIFO) — it immediately plunges into neighbor 1, following that path all the way to the end before ever looking at 2. Mnemonic: Breadth = Queue (fan out); Depth = Stack (dive down)."
+    }
+  });
+
+  // Step 3: Visit 1, dive to 3
+  steps.push({draw:()=>drawGraph(g(S([0,1]),1)),
+    note:"Visit 1. Its unvisited neighbors: 3 and 4. Dive deeper — push dfs(3) onto the call stack.   Call stack: [dfs(0), dfs(1), dfs(3)]"});
+
+  // Step 4: Visit 3 — dead end
+  steps.push({draw:()=>drawGraph(g(S([0,1,3]),3)),
+    note:"Visit 3. Neighbors: 1 (already visited). DEAD END — no unvisited neighbors left. Time to backtrack!   Call stack: [dfs(0), dfs(1), dfs(3) ← returns]"});
+
+  // Step 5: Backtrack to 1, then visit 4
+  // Question 2: what DFS does at a dead end
+  steps.push({draw:()=>drawGraph(g(S([0,1,3]),1)),
+    note:"dfs(3) returns. We're back at node 1. Node 4 is still unvisited — dive into it next.",
+    question:{
+      prompt:"DFS just hit a dead end at node 3 (no unvisited neighbors). What does DFS do next?",
+      options:[
+        "Restart the whole traversal from node 0.",
+        "Jump to the nearest unvisited node regardless of where we are.",
+        "Backtrack to the most recent node that still has unvisited neighbors (node 1), then continue from there."
+      ],
+      answer:2,
+      explain:"Backtracking is the heart of DFS. The call stack (or explicit stack) remembers exactly where to return: the most recent caller that still has unexplored branches. Here that's node 1, which still has neighbor 4 waiting."
+    }
+  });
+
+  // Step 6: Visit 4 — KEEP DIVING into 2 (edge 4-2 exists); do NOT backtrack
+  steps.push({draw:()=>drawGraph(g(S([0,1,3,4]),4)),
+    note:"Visit 4. Neighbors: 1 (visited) and 2 (UNVISITED). An unexplored neighbor exists, so DFS does NOT backtrack — it dives deeper, across edge 4–2, into node 2.   Call stack: [dfs(0), dfs(1), dfs(4)]"});
+
+  // Step 7: Visit 2 (reached by diving from 4), dive to 5
+  steps.push({draw:()=>drawGraph(g(S([0,1,2,3,4]),2)),
+    note:"Visit 2 — reached by diving across edge 4–2, NOT by returning to node 0. Neighbors 0,4 are visited; 5 is unvisited → dive into 5.   Call stack: [dfs(0), dfs(1), dfs(4), dfs(2)]"});
+
+  // Step 8: Visit 5 — dead end, stack unwinds
+  steps.push({draw:()=>drawGraph(g(S([0,1,2,3,4,5]),5)),
+    note:"Visit 5. Only neighbor is 2 (visited). DEAD END → now the whole stack unwinds: 5→2→4→1→0. Back at 0, its last neighbor 2 is already visited, so we're done.   Call stack empties."});
+
+  // Step 9: Complete
+  steps.push({draw:()=>drawGraph(g(S([0,1,2,3,4,5]),null)),
+    note:"DFS complete. Visit order: 0 → 1 → 3 → 4 → 2 → 5. It plunged down one long chain (0-1-4-2-5), backtracking ONLY at true dead ends (3, then 5). Compare BFS (0 | 1,2 | 3,4,5): BFS spreads in rings; DFS dives."});
+
+  return steps;
+}
+STEPS=buildSteps();render();
+</script>
+</body>
+</html>

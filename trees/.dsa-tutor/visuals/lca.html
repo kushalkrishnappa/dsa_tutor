@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Lowest Common Ancestor — the fork-point return</title>
+<style>
+  body{margin:0;background:#15151f;color:#eee;font:15px/1.5 -apple-system,Segoe UI,Roboto,sans-serif}
+  .wrap{max-width:760px;margin:0 auto;padding:24px}
+  h1{font-size:20px;margin:0 0 4px}
+  .desc{color:#aaa;margin:0 0 16px}
+  #stage{background:#1d1d2a;border:1px solid #333;border-radius:10px}
+  svg{width:100%;height:auto;display:block}
+  .narration{min-height:24px;margin:12px 0;color:#cfcfe0}
+  .controls{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  button{background:#2b2b3a;color:#eee;border:1px solid #555;border-radius:6px;padding:6px 12px;cursor:pointer}
+  button:hover{border-color:#e0b341}
+  .counter{margin-left:auto;color:#888}
+  .quiz{margin-top:16px;background:#1d1d2a;border:1px solid #3a3a4a;border-radius:10px;padding:14px}
+  .quiz .q{font-weight:600;margin-bottom:8px}
+  .quiz button{margin:4px 6px 4px 0}
+  .reveal{margin-top:10px;color:#cfcfe0}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Lowest Common Ancestor — the fork-point return</h1>
+  <p class="desc">Each node reports either <code>None</code> ("neither p nor q down here") or a node reference ("found one"). Two finds meeting at once means you're standing at the fork.</p>
+  <div id="stage"><svg id="svg" viewBox="0 0 640 360"></svg></div>
+  <div class="narration" id="narration">—</div>
+  <div class="controls">
+    <button id="prev">◀ Prev</button>
+    <button id="play">▶ Play</button>
+    <button id="step">Step ▶|</button>
+    <button id="reset">⟲ Reset</button>
+    <label>Speed <input id="speed" type="range" min="300" max="1600" value="900"></label>
+    <span class="counter" id="counter"></span>
+  </div>
+  <div class="quiz" id="quiz" hidden>
+    <div class="q" id="qtext"></div>
+    <div id="qopts"></div>
+    <div class="reveal" id="reveal" hidden></div>
+  </div>
+</div>
+<script>
+/* ===== infrastructure: drawing helpers ===== */
+const SVG="http://www.w3.org/2000/svg";
+const svg=document.getElementById('svg');
+function el(t,a){const e=document.createElementNS(SVG,t);for(const k in a)e.setAttribute(k,a[k]);return e;}
+function clear(){while(svg.firstChild)svg.removeChild(svg.firstChild);}
+const COL={idle:'#2b2b3a',idleStroke:'#666',visited:'#3fb950',current:'#e0b341',curStroke:'#ffd75e',edge:'#7a7a8c',text:'#fff'};
+
+function drawGraph(g){
+  clear(); const pos={}; g.nodes.forEach(n=>pos[n.id]=n);
+  (g.edges||[]).forEach(([a,b])=>svg.appendChild(el('line',
+    {x1:pos[a].x,y1:pos[a].y,x2:pos[b].x,y2:pos[b].y,stroke:COL.edge,'stroke-width':2})));
+  g.nodes.forEach(n=>{
+    const v=g.visited&&g.visited.has(n.id), c=g.current===n.id;
+    svg.appendChild(el('circle',{cx:n.x,cy:n.y,r:24,
+      fill:c?COL.current:(v?COL.visited:COL.idle),
+      stroke:c?COL.curStroke:(v?COL.visited:COL.idleStroke),'stroke-width':2}));
+    const t=el('text',{x:n.x,y:n.y+5,'text-anchor':'middle',fill:COL.text,'font-size':12});
+    t.textContent=(n.label!=null?n.label:n.id); svg.appendChild(t);
+  });
+}
+
+function layoutTree(root){
+  const nodes=[],edges=[]; let leaf=0; const dy=80,x0=60,y0=40;
+  (function rec(n,depth){
+    let mid; if(n.children&&n.children.length){const ks=n.children.map(c=>rec(c,depth+1));mid=(ks[0]+ks[ks.length-1])/2;}
+    else mid=leaf++;
+    nodes.push({id:n.id,x:x0+mid*80,y:y0+depth*dy,label:(n.label!=null?n.label:n.id)});
+    (n.children||[]).forEach(c=>edges.push([n.id,c.id])); return mid;
+  })(root,0);
+  return {nodes,edges};
+}
+function drawTree(t){const {nodes,edges}=layoutTree(t.root);drawGraph({nodes,edges,visited:t.visited,current:t.current});}
+
+/* ===== infrastructure: step engine + questions (do not edit) ===== */
+const narration=document.getElementById('narration'),counter=document.getElementById('counter');
+const quiz=document.getElementById('quiz'),qtext=document.getElementById('qtext'),qopts=document.getElementById('qopts'),reveal=document.getElementById('reveal');
+const playBtn=document.getElementById('play'),speed=document.getElementById('speed');
+let STEPS=[],idx=0,timer=null;
+function render(){const s=STEPS[idx];s.draw();narration.textContent=s.note||'';counter.textContent=(idx+1)+' / '+STEPS.length;
+  if(s.question)showQuestion(s.question);else quiz.hidden=true;}
+function showQuestion(q){quiz.hidden=false;qtext.textContent=q.prompt;reveal.hidden=true;qopts.innerHTML='';
+  q.options.forEach((o,i)=>{const b=document.createElement('button');b.textContent=o;
+    b.onclick=()=>{reveal.hidden=false;reveal.textContent=(i===q.answer?'✓ Correct. ':'✗ Not quite. ')+q.explain;};qopts.appendChild(b);});}
+function step(){if(idx<STEPS.length-1){idx++;render();}else pause();}
+function prev(){if(idx>0){idx--;render();}}
+function pause(){clearInterval(timer);timer=null;playBtn.textContent='▶ Play';}
+function play(){if(timer){pause();return;}playBtn.textContent='⏸ Pause';timer=setInterval(()=>{if(idx>=STEPS.length-1){pause();return;}step();},+speed.value);}
+function reset(){pause();idx=0;render();}
+document.getElementById('prev').onclick=prev;
+document.getElementById('step').onclick=()=>{pause();step();};
+document.getElementById('reset').onclick=reset;
+playBtn.onclick=play;
+
+/* ===== EDIT BELOW: define the lesson ===== */
+function buildSteps(){
+  const TREE={id:'3',val:3,children:[
+    {id:'5',val:5,children:[
+      {id:'6',val:6,children:[]},
+      {id:'2',val:2,children:[
+        {id:'7',val:7,children:[]},
+        {id:'4',val:4,children:[]}
+      ]}
+    ]},
+    {id:'1',val:1,children:[
+      {id:'0',val:0,children:[]},
+      {id:'8',val:8,children:[]}
+    ]}
+  ]};
+  function labeledRoot(overrides){
+    function rec(n){return {id:n.id,label:(overrides[n.id]!=null?overrides[n.id]:String(n.val)),children:(n.children||[]).map(rec)};}
+    return rec(TREE);
+  }
+  const steps=[];
+  steps.push({draw:()=>drawTree({root:labeledRoot({}),visited:new Set(),current:null}),
+    note:"Query 1: LCA(5, 1). Each node reports None ('neither p nor q below me') or a node reference ('found one')."});
+  steps.push({draw:()=>drawTree({root:labeledRoot({'5':'5=p'}),visited:new Set(),current:'5'}),
+    note:"At node 5: this IS p. Base case -- return node 5 immediately, no need to search its own children."});
+  steps.push({draw:()=>drawTree({root:labeledRoot({'5':'5=p','1':'1=q'}),visited:new Set(['5']),current:'1'}),
+    note:"At node 1: this IS q. Base case -- return node 1 immediately."});
+  steps.push({draw:()=>drawTree({root:labeledRoot({'5':'5=p','1':'1=q'}),visited:new Set(['5','1']),current:'3'}),
+    note:"Root 3 receives 'found' from BOTH its left call (node 5) and right call (node 1).",
+    question:{prompt:"Both left and right reported a real node back to root 3. What should root 3 return?",
+      options:["3 itself -- this is the fork point","Node 5, whichever came first","None, since two finds is a contradiction"],
+      answer:0,
+      explain:"When both sides report a find, the current node IS the point where the two search paths diverge. That's the definition of lowest common ancestor -- return the current node."}});
+  steps.push({draw:()=>drawTree({root:labeledRoot({'5':'5=p','1':'1=q'}),visited:new Set(['5','1','3']),current:null}),
+    note:"LCA(5, 1) = 3. Correct -- 3 is exactly where the paths to 5 and 1 split apart."});
+  steps.push({draw:()=>drawTree({root:labeledRoot({'5':'5=p','4':'4=q'}),visited:new Set(),current:'5'}),
+    note:"Query 2: LCA(5, 4). At node 5: this IS p. Return node 5 immediately -- notice we do NOT look inside node 5's own subtree, even though q=4 actually lives there."});
+  steps.push({draw:()=>drawTree({root:labeledRoot({'5':'5=p','4':'4=q'}),visited:new Set(['5']),current:'3'}),
+    note:"The entire right side (1, 0, 8) contains neither 5 nor 4 -- it reports back None. Root 3 gets node 5 from the left, None from the right.",
+    question:{prompt:"Root 3 gets 'node 5' from the left and None from the right. What should root 3 return?",
+      options:["3 itself, since something was found","Node 5, bubbled up untouched","None, since the right side failed"],
+      answer:1,
+      explain:"Only ONE side found something -- that's not a fork, so the current node just relays the found reference upward untouched. This is exactly how the ancestor case resolves correctly: node 5 keeps passing straight through every ancestor above it and becomes the final answer, without ever needing to explicitly check whether q is inside 5's own subtree."}});
+  steps.push({draw:()=>drawTree({root:labeledRoot({'5':'5=p','4':'4=q'}),visited:new Set(['5','3']),current:null}),
+    note:"LCA(5, 4) = 5. 5 is an ancestor of 4, and the single non-null branch just passes straight through -- that's the whole mechanism, no special-casing needed."});
+  return steps;
+}
+STEPS=buildSteps();render();
+</script>
+</body>
+</html>

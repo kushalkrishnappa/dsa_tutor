@@ -1,0 +1,97 @@
+{
+  "area": "tries",
+  "last_session_date": "2026-09-20",
+  "roadmap": ".dsa-tutor/roadmap.html",
+  "current": "Word Search / Wildcards",
+  "topics": [
+    { "name": "Trie Fundamentals", "status": "done" },
+    { "name": "Insertion", "status": "done" },
+    { "name": "Exact Search", "status": "done" },
+    { "name": "Prefix Search", "status": "done" },
+    { "name": "Deletion", "status": "not-started" },
+    { "name": "Autocomplete", "status": "not-started" },
+    { "name": "Word Search / Wildcards", "status": "in-progress" },
+    { "name": "Replace Words / Word Break", "status": "not-started" },
+    { "name": "Maximum XOR (Bitwise Trie)", "status": "not-started" },
+    { "name": "Compressed Trie (Radix)", "status": "not-started" }
+  ],
+  "concepts": [
+    {
+      "name": "Trie Fundamentals",
+      "mental_model": "An org-chart/subway map growing down from a blank root. A word is a PATH from the root, not a stored string; you know a path spells a real word because its landing node has flag=True.",
+      "mnemonic": "Index is the letter, flag is the finish line. (val[ord(ch)-ord('a')] = the child; flag = a word ends here.)",
+      "mastery": "solid",
+      "last_reviewed": "2026-09-19",
+      "review_interval": 3,
+      "aces": 1,
+      "past_mistakes": [],
+      "visual": [".dsa-tutor/visuals/trie-fundamentals.html"],
+      "practice_done": [],
+      "calibration": { "confident_right": 1, "confident_wrong": 0, "unsure_right": 0, "unsure_wrong": 0 },
+      "taught_back": "2026-09-19"
+    },
+    {
+      "name": "Insertion",
+      "mental_model": "Walk the word from root, one node per letter; conjure a child only when the slot is empty; set flag on the last node.",
+      "mnemonic": "Index, walk-or-create, finish line. The advance (ptr = ptr.val[idx]) is unconditional; only creation is conditional.",
+      "mastery": "solid",
+      "last_reviewed": "2026-09-19",
+      "review_interval": 3,
+      "aces": 1,
+      "past_mistakes": [],
+      "visual": [".dsa-tutor/visuals/trie-fundamentals.html"],
+      "practice_done": ["LC-208"],
+      "calibration": { "confident_right": 1, "confident_wrong": 0, "unsure_right": 0, "unsure_wrong": 0 },
+      "taught_back": null
+    },
+    {
+      "name": "Exact Search",
+      "mental_model": "Re-walk the word; a missing slot means 'not here' -> return False. Land on the last node and READ its flag (don't just confirm arrival).",
+      "mnemonic": "Same walk as insert, but missing slot = dead end, and the finish line must be lit: return ptr.flag.",
+      "mastery": "solid",
+      "last_reviewed": "2026-09-19",
+      "review_interval": 3,
+      "aces": 1,
+      "past_mistakes": [
+        { "note": "LC-720 variant: when the check needs flag=True at EVERY prefix node, advance FIRST then read ptr.flag; reading before advancing tests the parent and hits root.flag=False on iteration 1. Resolved 2026-09-19 by tracing helper('a').", "high_confidence": false }
+      ],
+      "visual": [".dsa-tutor/visuals/trie-fundamentals.html"],
+      "practice_done": ["LC-208", "LC-720"],
+      "calibration": { "confident_right": 1, "confident_wrong": 0, "unsure_right": 0, "unsure_wrong": 0 },
+      "taught_back": "2026-09-19"
+    },
+    {
+      "name": "Prefix Search",
+      "mental_model": "Identical walk to search, but the path merely existing is enough. No flag check — return True if you survived the walk.",
+      "mnemonic": "startsWith = 'did the road exist', search = 'and is there a house at the end'. Only search reads the flag.",
+      "mastery": "solid",
+      "last_reviewed": "2026-09-19",
+      "review_interval": 3,
+      "aces": 1,
+      "past_mistakes": [],
+      "visual": [".dsa-tutor/visuals/trie-fundamentals.html"],
+      "practice_done": ["LC-208", "LC-720"],
+      "calibration": { "confident_right": 1, "confident_wrong": 0, "unsure_right": 0, "unsure_wrong": 0 },
+      "taught_back": "2026-09-19"
+    },
+    {
+      "name": "Word Search / Wildcards",
+      "mental_model": "Reframe search as recursive DFS(node, i) = 'can word[i:] match starting from node?'. A '.' forks into all children; a single walking pointer can't branch, so recursion is the shape.",
+      "mnemonic": "Dot = fork (any child), letter = one road, end of word = read the flag. any() over children short-circuits on first hit.",
+      "mastery": "learning",
+      "last_reviewed": "2026-09-20",
+      "review_interval": 1,
+      "aces": 0,
+      "past_mistakes": [
+        { "note": "First wildcard attempt used an iterative single-ptr loop: iterated dict KEYS not children, recursed from self.root instead of the current child, didn't consume the dot (word[idx:] vs idx+1), and fell through to ptr.val['.'] (KeyError). Root cause: tried to express branching without recursion. SOLUTION WAS PROVIDED (learner asked) — needs to re-implement solo to earn mastery.", "high_confidence": false },
+        { "note": "Solo re-implementation attempt (2026-09-20) still had: (a) dot quantifier INVERTED — 'if not dfs(child): return False' (all-must-match) instead of 'if dfs(child): return True / else return False after loop' (any-can-match); (b) kept pre-filled 52-key dict so 'ch not in node.val' never fires and .values() yields Nones -> crash; (c) 'nb' typo. Solution provided a SECOND time. Must produce the 4-case DFS skeleton cold next session before this counts as mastered.", "high_confidence": false }
+      ],
+      "visual": [],
+      "practice_done": ["LC-211 (solution provided, not solo)"],
+      "calibration": { "confident_right": 0, "confident_wrong": 0, "unsure_right": 0, "unsure_wrong": 0 },
+      "taught_back": null
+    }
+  ],
+  "notes": "Learner arrived with a hand-written array-based scaffold in tries.py: TrieNode has val=[None]*26 and flag=False; Trie has root plus stubbed insert/search/startsWith. Day 1 pre-test was strong: understood shared-prefix node reuse cold, and volunteered that end-of-word and has-children are independent bits (the search vs startsWith insight).",
+  "session_recap": "Day 1 (2026-09-19): built LC-208 end to end from scratch — Fundamentals, Insertion, Exact Search, Prefix Search all done & solid (confident+correct, solo). Then SOLVED LC-720 Longest Word in Dictionary: derived the rule (every prefix must be a word) via Socratic tracing, and debugged two independent bugs himself by tracing concrete inputs — (1) flag-timing: advance THEN read flag (was reading root.flag on iter 1), (2) tiebreak boolean: OR of two win-cases (longer) OR (equal-length AND lex-smaller), not a nested AND. Verified all 5 test cases pass. Deletion is on-deck (not yet taught). Queue remaining: LC-1268 Search Suggestions (Autocomplete topic), LC-211 Add and Search Word (Wildcard topic). Optional _find() helper refactor (DRY the shared walk) still on the table. Then jumped to LC-211 (Wildcard search): got the recursion insight himself but iterative attempt had 4 bugs (keys-not-children, recurse-from-root, dot-not-consumed, KeyError fallthrough); ASKED FOR the solution and I gave the DFS(node,i) version + switched to sparse dict. Word Search/Wildcards left in-progress — learner must re-implement solo to earn mastery (interval 1, surfaces next session). Deletion still not-started."
+}

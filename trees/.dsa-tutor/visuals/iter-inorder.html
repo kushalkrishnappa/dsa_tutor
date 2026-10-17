@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Iterative Inorder — the explicit stack</title>
+<style>
+  body{margin:0;background:#15151f;color:#eee;font:15px/1.5 -apple-system,Segoe UI,Roboto,sans-serif}
+  .wrap{max-width:760px;margin:0 auto;padding:24px}
+  h1{font-size:20px;margin:0 0 4px}
+  .desc{color:#aaa;margin:0 0 16px}
+  #stage{background:#1d1d2a;border:1px solid #333;border-radius:10px}
+  svg{width:100%;height:auto;display:block}
+  .narration{min-height:24px;margin:12px 0;color:#cfcfe0}
+  .controls{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  button{background:#2b2b3a;color:#eee;border:1px solid #555;border-radius:6px;padding:6px 12px;cursor:pointer}
+  button:hover{border-color:#e0b341}
+  .counter{margin-left:auto;color:#888}
+  .quiz{margin-top:16px;background:#1d1d2a;border:1px solid #3a3a4a;border-radius:10px;padding:14px}
+  .quiz .q{font-weight:600;margin-bottom:8px}
+  .quiz button{margin:4px 6px 4px 0}
+  .reveal{margin-top:10px;color:#cfcfe0}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Iterative Inorder — the explicit stack</h1>
+  <p class="desc">A BST, so inorder should come out SORTED. Gold = current node. The pile on the right is the stack of "unfinished business" you'd otherwise leave to recursion. Watch it grow on every dive-left and shrink on every visit.</p>
+  <div id="stage"><svg id="svg" viewBox="0 0 640 380"></svg></div>
+  <div class="narration" id="narration">—</div>
+  <div class="controls">
+    <button id="prev">◀ Prev</button>
+    <button id="play">▶ Play</button>
+    <button id="step">Step ▶|</button>
+    <button id="reset">⟲ Reset</button>
+    <label>Speed <input id="speed" type="range" min="300" max="1600" value="900"></label>
+    <span class="counter" id="counter"></span>
+  </div>
+  <div class="quiz" id="quiz" hidden>
+    <div class="q" id="qtext"></div>
+    <div id="qopts"></div>
+    <div class="reveal" id="reveal" hidden></div>
+  </div>
+</div>
+<script>
+const SVG="http://www.w3.org/2000/svg";
+const svg=document.getElementById('svg');
+function el(t,a){const e=document.createElementNS(SVG,t);for(const k in a)e.setAttribute(k,a[k]);return e;}
+function clear(){while(svg.firstChild)svg.removeChild(svg.firstChild);}
+const COL={idle:'#2b2b3a',idleStroke:'#666',visited:'#3fb950',current:'#e0b341',curStroke:'#ffd75e',edge:'#7a7a8c',text:'#fff'};
+
+function drawGraph(g){
+  const pos={}; g.nodes.forEach(n=>pos[n.id]=n);
+  (g.edges||[]).forEach(([a,b])=>svg.appendChild(el('line',
+    {x1:pos[a].x,y1:pos[a].y,x2:pos[b].x,y2:pos[b].y,stroke:COL.edge,'stroke-width':2})));
+  g.nodes.forEach(n=>{
+    const v=g.visited&&g.visited.has(n.id), c=g.current===n.id;
+    svg.appendChild(el('circle',{cx:n.x,cy:n.y,r:18,
+      fill:c?COL.current:(v?COL.visited:COL.idle),
+      stroke:c?COL.curStroke:(v?COL.visited:COL.idleStroke),'stroke-width':2}));
+    const t=el('text',{x:n.x,y:n.y+5,'text-anchor':'middle',fill:COL.text,'font-size':13});
+    t.textContent=(n.label!=null?n.label:n.id); svg.appendChild(t);
+  });
+}
+
+const narration=document.getElementById('narration'),counter=document.getElementById('counter');
+const quiz=document.getElementById('quiz'),qtext=document.getElementById('qtext'),qopts=document.getElementById('qopts'),reveal=document.getElementById('reveal');
+const playBtn=document.getElementById('play'),speed=document.getElementById('speed');
+let STEPS=[],idx=0,timer=null;
+function render(){const s=STEPS[idx];clear();s.draw();narration.textContent=s.note||'';counter.textContent=(idx+1)+' / '+STEPS.length;
+  if(s.question)showQuestion(s.question);else quiz.hidden=true;}
+function showQuestion(q){quiz.hidden=false;qtext.textContent=q.prompt;reveal.hidden=true;qopts.innerHTML='';
+  q.options.forEach((o,i)=>{const b=document.createElement('button');b.textContent=o;
+    b.onclick=()=>{reveal.hidden=false;reveal.textContent=(i===q.answer?'✓ Correct. ':'✗ Not quite. ')+q.explain;};qopts.appendChild(b);});}
+function step(){if(idx<STEPS.length-1){idx++;render();}else pause();}
+function prev(){if(idx>0){idx--;render();}}
+function pause(){clearInterval(timer);timer=null;playBtn.textContent='▶ Play';}
+function play(){if(timer){pause();return;}playBtn.textContent='⏸ Pause';timer=setInterval(()=>{if(idx>=STEPS.length-1){pause();return;}step();},+speed.value);}
+function reset(){pause();idx=0;render();}
+document.getElementById('prev').onclick=prev;
+document.getElementById('step').onclick=()=>{pause();step();};
+document.getElementById('reset').onclick=reset;
+playBtn.onclick=play;
+
+/* ===== lesson ===== */
+function buildSteps(){
+  const P={4:[300,40],2:[190,115],6:[410,115],1:[130,190],3:[250,190],5:[350,190],7:[470,190]};
+  const NODES=Object.keys(P).map(id=>({id:+id,x:P[id][0],y:P[id][1],label:''+id}));
+  const E=[[4,2],[4,6],[2,1],[2,3],[6,5],[6,7]];
+  const T={4:{l:2,r:6},2:{l:1,r:3},6:{l:5,r:7},1:{l:null,r:null},3:{l:null,r:null},5:{l:null,r:null},7:{l:null,r:null}};
+
+  function drawFrame(s){
+    drawGraph({nodes:NODES,edges:E,visited:new Set(s.out),current:s.cur});
+    // stack (vertical, bottom = index 0)
+    const bx=548,bw=54,bh=28,baseY=210;
+    const lab=el('text',{x:bx+bw/2,y:baseY+bh+22,'text-anchor':'middle',fill:'#888','font-size':11});lab.textContent='stack';svg.appendChild(lab);
+    if(s.stack.length===0){const em=el('text',{x:bx+bw/2,y:baseY+bh/2+5,'text-anchor':'middle',fill:'#555','font-size':12});em.textContent='(empty)';svg.appendChild(em);}
+    s.stack.forEach((v,i)=>{
+      const y=baseY-i*(bh+4);
+      svg.appendChild(el('rect',{x:bx,y,width:bw,height:bh,rx:5,fill:'#2b2b3a',stroke:'#e0b341','stroke-width':2}));
+      const t=el('text',{x:bx+bw/2,y:y+bh/2+5,'text-anchor':'middle',fill:'#fff','font-size':13});t.textContent=v;svg.appendChild(t);
+    });
+    // output
+    const o=el('text',{x:20,y:355,fill:'#3fb950','font-size':15,'font-family':'ui-monospace,Menlo,monospace'});
+    o.textContent='inorder →  '+(s.out.length?s.out.join('  '):'(nothing yet)');svg.appendChild(o);
+  }
+
+  const stack=[],out=[],steps=[];
+  function frame(cur,note,question){const s={stack:[...stack],out:[...out],cur:cur};steps.push({draw:()=>drawFrame(s),note,question});}
+
+  frame(4,"Start. cur = root (4), stack empty. The plan: dive left as far as we can, stacking every node we pass.",null);
+  let cur=4;
+  let firstDiveEnd=true, rightTurnAsked=false;
+  while(stack.length||cur!==null){
+    while(cur!==null){
+      stack.push(cur);
+      const leftChild=T[cur].l;
+      let q=null;
+      if(cur===1)
+        q={prompt:"We pushed 1, and 1 has no left child, so cur becomes None. The left dive is over. What happens next?",
+           options:["Push None onto the stack","Pop the top of the stack and VISIT it","Stop — we're done"],answer:1,
+           explain:"A None cur means 'no more left to explore.' We backtrack: pop the most recently stacked node and visit it. That node is the smallest we haven't emitted yet."};
+      frame(cur,"Dive left: push "+cur+", move to its left child"+(leftChild===null?" — but there is none, so cur = None.":"."),q);
+      cur=leftChild;
+    }
+    cur=stack.pop();
+    out.push(cur);
+    const rightChild=T[cur].r;
+    let q=null;
+    if(cur===2 && !rightTurnAsked){rightTurnAsked=true;
+      q={prompt:"Just visited 2, and now we set cur = 2's RIGHT child (3). Why turn right immediately after visiting?",
+         options:["Inorder is Left→Node→Right, so the right subtree is the only piece left","To find 2's parent","Stacks require it"],answer:0,
+         explain:"Inorder = L, N, R. We finished 2's left subtree and just emitted 2 itself, so the remaining obligation is its right subtree. Turn right and repeat the whole dive-left dance there."};
+    }
+    frame(cur,"Left exhausted → pop "+cur+", VISIT it (goes to output), then turn to its right child"+(rightChild===null?" (none, so cur = None — pop again next).":"."),q);
+    cur=rightChild;
+  }
+  frame(null,"Stack empty AND cur is None → done. Output is 1 2 3 4 5 6 7 — sorted, because inorder on a BST is sorted. The stack did exactly what recursion's call stack would have.",null);
+  return steps;
+}
+STEPS=buildSteps();render();
+</script>
+</body>
+</html>

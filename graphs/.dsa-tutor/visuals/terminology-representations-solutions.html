@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Graph Terminology &amp; Representations — 15 Visual Solutions</title>
+<style>
+  body{margin:0;background:#15151f;color:#eee;font:15px/1.5 -apple-system,Segoe UI,Roboto,sans-serif}
+  .wrap{max-width:820px;margin:0 auto;padding:22px}
+  h1{font-size:20px;margin:0 0 2px}
+  .sub{color:#aaa;margin:0 0 14px;font-size:13px}
+  .dots{display:flex;gap:6px;flex-wrap:wrap;margin:0 0 14px}
+  .dot{width:26px;height:26px;border-radius:6px;border:1px solid #444;background:#20202e;color:#9a9ab0;
+       font-size:12px;cursor:pointer;display:flex;align-items:center;justify-content:center}
+  .dot.active{border-color:#e0b341;color:#e0b341;background:rgba(224,179,65,.12)}
+  .dot.done{color:#3fb950;border-color:#2e7d46}
+  .card{background:#1d1d2a;border:1px solid #333;border-radius:12px;padding:18px}
+  .tag{display:inline-block;font-size:11px;letter-spacing:.6px;text-transform:uppercase;
+       color:#9aa4c4;background:#23233a;border:1px solid #34344c;border-radius:20px;padding:3px 10px;margin-bottom:10px}
+  .flag{display:inline-block;font-size:11px;color:#f0b36b;background:rgba(245,158,11,.12);
+        border:1px solid #6b4a12;border-radius:20px;padding:3px 10px;margin:0 0 10px 8px}
+  .qn{color:#e0b341;font-weight:700;font-size:13px;margin-bottom:4px}
+  .qt{font-size:16px;font-weight:600;margin:0 0 12px;color:#f2f2f7}
+  .qt code,.sol code{background:#12121a;border:1px solid #333;border-radius:4px;padding:1px 5px;font-size:13px;color:#ffd98a}
+  #figwrap{background:#15151f;border:1px solid #2a2a3a;border-radius:10px;padding:6px}
+  svg{width:100%;height:auto;display:block}
+  .sol{margin-top:14px;padding:14px;background:#191924;border:1px solid #2f2f42;border-radius:10px;color:#d6d6e6}
+  .sol p{margin:0 0 8px}
+  .sol .key{color:#3fb950;font-weight:600}
+  .sol .bad{color:#f85149;font-weight:600}
+  .sol pre{background:#101018;border:1px solid #2a2a3a;border-radius:8px;padding:10px;overflow:auto;margin:8px 0}
+  .sol pre code{background:none;border:none;padding:0;color:#cfe0ff;font-size:12.5px;line-height:1.5}
+  .controls{display:flex;gap:8px;align-items:center;margin-top:14px}
+  button{background:#2b2b3a;color:#eee;border:1px solid #555;border-radius:8px;padding:8px 14px;cursor:pointer;font-size:14px}
+  button:hover{border-color:#e0b341}
+  #show{margin-left:auto;background:#243a24;border-color:#2e7d46;color:#c8f5cf}
+  #show:hover{border-color:#3fb950}
+  .hint{color:#777;font-size:12px;text-align:center;margin-top:10px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Graph Terminology &amp; Representations</h1>
+  <p class="sub">15 visual solutions · try the diagram first, then reveal · ⚑ = one of your recurring slips</p>
+  <div class="dots" id="dots"></div>
+  <div class="card">
+    <div id="tags"></div>
+    <div class="qn" id="qn"></div>
+    <div class="qt" id="qt"></div>
+    <div id="figwrap"><svg id="fig" viewBox="0 0 720 340"></svg></div>
+    <div class="sol" id="sol" hidden></div>
+    <div class="controls">
+      <button id="prev">◀ Prev</button>
+      <button id="next">Next ▶</button>
+      <button id="show">Show solution</button>
+    </div>
+    <div class="hint">← / → to navigate · Space to reveal</div>
+  </div>
+</div>
+<script>
+const NS="http://www.w3.org/2000/svg";
+const svg=document.getElementById('fig');
+function E(t,a){const e=document.createElementNS(NS,t);for(const k in a)e.setAttribute(k,a[k]);return e;}
+function add(s,t,a){const e=E(t,a);s.appendChild(e);return e;}
+function txt(s,x,y,str,a){a=a||{};const o=Object.assign({x:x,y:y,'text-anchor':'middle','dominant-baseline':'middle',fill:'#fff','font-size':14,'font-family':'-apple-system,Segoe UI,Roboto,sans-serif'},a);const e=add(s,'text',o);e.textContent=str;return e;}
+function defs(s){
+  const d=add(s,'defs',{});
+  const mk=(id,col)=>{const m=E('marker',{id:id,markerWidth:12,markerHeight:12,refX:9,refY:3,orient:'auto',markerUnits:'userSpaceOnUse'});m.appendChild(E('path',{d:'M0,0 L9,3 L0,6 Z',fill:col}));d.appendChild(m);};
+  mk('ah','#e0b341');mk('ahg','#3fb950');mk('ahr','#f85149');mk('ahw','#7a7a8c');
+}
+function node(s,x,y,label,o){o=o||{};add(s,'circle',{cx:x,cy:y,r:o.r||22,fill:o.fill||'#2b2b3a',stroke:o.stroke||'#666','stroke-width':o.sw||2});txt(s,x,y,label,{fill:o.tc||'#fff','font-size':o.fs||14,'font-weight':o.fw||400});}
+function line(s,x1,y1,x2,y2,o){o=o||{};const a={x1:x1,y1:y1,x2:x2,y2:y2,stroke:o.stroke||'#7a7a8c','stroke-width':o.sw||2};if(o.dash)a['stroke-dasharray']=o.dash;if(o.marker)a['marker-end']=o.marker;add(s,'line',a);}
+function seg(x1,y1,x2,y2,r1,r2){const dx=x2-x1,dy=y2-y1,L=Math.hypot(dx,dy)||1,ux=dx/L,uy=dy/L;return[x1+ux*(r1||0),y1+uy*(r1||0),x2-ux*(r2||0),y2-uy*(r2||0)];}
+function arrow(s,x1,y1,x2,y2,o){o=o||{};const p=seg(x1,y1,x2,y2,o.r1||0,o.r2||22);const mk=o.color==='r'?'url(#ahr)':o.color==='g'?'url(#ahg)':o.color==='w'?'url(#ahw)':'url(#ah)';const st=o.color==='r'?'#f85149':o.color==='g'?'#3fb950':o.color==='w'?'#7a7a8c':'#e0b341';line(s,p[0],p[1],p[2],p[3],{stroke:st,'sw':o.sw||2.4,marker:mk,dash:o.dash});}
+function box(s,x,y,w,h,o){o=o||{};const a={x:x,y:y,width:w,height:h,rx:o.rx||8,fill:o.fill||'#20202e',stroke:o.stroke||'#3a3a52','stroke-width':o.sw||1.5};if(o.dash)a['stroke-dasharray']=o.dash;add(s,'rect',a);}
+function matrix(s,x0,y0,g,o){o=o||{};const cw=o.cw||32,ch=o.ch||28;g[0].forEach((_,c)=>txt(s,x0+c*cw+cw/2,y0-13,String(c),{fill:'#7f7f95','font-size':11}));
+  g.forEach((row,r)=>{txt(s,x0-15,y0+r*ch+ch/2,String(r),{fill:'#7f7f95','font-size':11});
+    row.forEach((v,c)=>{const hi=o.hi&&o.hi.has(r+','+c),hr=o.hr&&o.hr.has(r+','+c);
+      add(s,'rect',{x:x0+c*cw,y:y0+r*ch,width:cw,height:ch,fill:hr?'rgba(248,81,73,.25)':hi?'rgba(224,179,65,.28)':'#161620',stroke:'#3a3a4a','stroke-width':1});
+      txt(s,x0+c*cw+cw/2,y0+r*ch+ch/2,String(v),{'font-size':13,fill:v?'#fff':'#5a5a6a'});});});}
+
+/* ======================= CARDS ======================= */
+const CARDS=[
+{ tag:"Terminology · Handshake lemma",
+  q:"In an undirected graph with V vertices and E edges, what does the <b>sum of all vertex degrees</b> equal, and why? What's the directed analog?",
+  fig:function(s){
+    var N={A:[150,80],B:[340,60],C:[250,200],D:[470,190]};
+    var Ed=[['A','B'],['B','C'],['C','A'],['C','D']];
+    Ed.forEach(function(e){line(s,N[e[0]][0],N[e[0]][1],N[e[1]][0],N[e[1]][1],{stroke:'#7a7a8c',sw:2.4});});
+    var deg={A:2,B:2,C:3,D:1};
+    for(var k in N){node(s,N[k][0],N[k][1],k,{});txt(s,N[k][0],N[k][1]-32,'deg '+deg[k],{fill:'#e0b341','font-size':12,'font-weight':700});}
+    txt(s,360,270,'Σ degrees = 2+2+3+1 = 8',{fill:'#fff','font-size':15,'font-weight':600});
+    txt(s,360,296,'= 2 × 4 edges = 2E   (every edge is counted at BOTH ends)',{fill:'#9fb0d6','font-size':13});
+  },
+  sol:"<p><span class='key'>Σ deg(v) = 2E.</span> Every edge has two endpoints, so it adds exactly 1 to the degree of each — it gets counted twice across the whole sum. This is the <b>Handshake Lemma</b>. A corollary: the number of odd-degree vertices is always even.</p><p><b>Directed:</b> Σ in-degree(v) = Σ out-degree(v) = E. Each directed edge contributes 1 out-degree at its tail and 1 in-degree at its head, so both sums equal E (not 2E).</p>"},
+
+{ tag:"Terminology · Sparse vs dense",
+  q:"What's the <b>maximum number of edges</b> in a simple <i>undirected</i> graph on V vertices? In a simple <i>directed</i> graph? Where do sparse and dense sit?",
+  fig:function(s){
+    var P={A:[180,70],B:[420,70],C:[180,240],D:[420,240]};
+    var all=[['A','B'],['A','C'],['A','D'],['B','C'],['B','D'],['C','D']];
+    all.forEach(function(e){line(s,P[e[0]][0],P[e[0]][1],P[e[1]][0],P[e[1]][1],{stroke:'#3fb950',sw:2});});
+    for(var k in P)node(s,P[k][0],P[k][1],k,{stroke:'#3fb950'});
+    txt(s,300,300,'K₄ complete: every pair joined → 6 = 4·3/2 edges',{fill:'#8fe0a0','font-size':13});
+    box(s,500,60,200,90,{});
+    txt(s,600,84,'undirected max',{fill:'#9aa4c4','font-size':12});
+    txt(s,600,108,'V(V−1)/2',{fill:'#fff','font-size':17,'font-weight':700});
+    box(s,500,165,200,90,{});
+    txt(s,600,189,'directed max',{fill:'#9aa4c4','font-size':12});
+    txt(s,600,213,'V(V−1)',{fill:'#fff','font-size':17,'font-weight':700});
+  },
+  sol:"<p><span class='key'>Undirected: V(V−1)/2</span> (choose 2 of V, one edge each pair). <span class='key'>Directed: V(V−1)</span> (each ordered pair can have its own arc — twice as many).</p><p><b>Sparse</b> ≈ E is O(V) (roughly linear in the number of nodes — most real graphs). <b>Dense</b> ≈ E approaches V² (near-complete). The whole list-vs-matrix decision rides on this: sparse → adjacency list; dense → adjacency matrix.</p>"},
+
+{ tag:"Terminology · Walk / Path / Cycle",
+  q:"Define <b>walk</b>, <b>path</b>, and <b>cycle</b>. Is undirected A—B walked A→B→A a cycle? What about directed A→B, B→A?",
+  fig:function(s){
+    txt(s,120,24,'PATH (no repeats)',{fill:'#9aa4c4','font-size':12});
+    [[60,70],[120,120],[180,70],[120,170]];
+    var pa=[[60,80],[140,120],[80,180]];
+    node(s,60,70,'1',{stroke:'#3fb950'});node(s,150,70,'2',{stroke:'#3fb950'});node(s,150,160,'3',{stroke:'#3fb950'});
+    line(s,60,70,150,70,{stroke:'#3fb950',sw:3});line(s,150,70,150,160,{stroke:'#3fb950',sw:3});
+    txt(s,105,200,'1→2→3 distinct',{fill:'#8fe0a0','font-size':11});
+
+    txt(s,360,24,'CYCLE (closes back)',{fill:'#9aa4c4','font-size':12});
+    node(s,320,70,'1',{stroke:'#e0b341'});node(s,410,70,'2',{stroke:'#e0b341'});node(s,365,160,'3',{stroke:'#e0b341'});
+    line(s,320,70,410,70,{stroke:'#e0b341',sw:3});line(s,410,70,365,160,{stroke:'#e0b341',sw:3});line(s,365,160,320,70,{stroke:'#e0b341',sw:3});
+    txt(s,365,200,'1→2→3→1',{fill:'#f0cf8a','font-size':11});
+
+    box(s,520,40,180,120,{dash:'5,4',stroke:'#555'});
+    node(s,555,80,'A',{});node(s,665,80,'B',{});
+    line(s,555,80,665,80,{stroke:'#7a7a8c',sw:2.4});
+    txt(s,610,120,'undirected A—B',{fill:'#9aa4c4','font-size':11});
+    txt(s,610,140,'one edge = U-turn, NOT a cycle',{fill:'#f0b36b','font-size':10.5});
+
+    box(s,520,180,180,120,{stroke:'#3fb950'});
+    node(s,555,230,'A',{});node(s,665,230,'B',{});
+    arrow(s,555,222,665,222,{r1:22,r2:22,color:'g'});
+    arrow(s,665,238,555,238,{r1:22,r2:22,color:'g'});
+    txt(s,610,275,'directed A→B, B→A',{fill:'#9aa4c4','font-size':11});
+    txt(s,610,292,'two edges = real 2-cycle',{fill:'#8fe0a0','font-size':10.5});
+  },
+  sol:"<p><b>Walk:</b> any sequence of edges, repeats allowed. <b>Path:</b> a walk with no repeated vertex. <b>Cycle:</b> a path that returns to its start using <b>distinct edges</b> (≥3 vertices undirected).</p><p><span class='key'>Undirected A→B→A is NOT a cycle</span> — it re-walks the <i>same single edge</i> (a U-turn). That's exactly what parent-skip refuses in undirected cycle detection. <span class='key'>Directed A→B, B→A IS a 2-cycle</span> — two <i>distinct</i> one-way edges (a mini roundabout), which is why directed detection must NOT skip the parent. This is your U-turn/roundabout anchor.</p>"},
+
+{ tag:"Terminology · DAG",
+  q:"What does <b>DAG</b> stand for, and which single algorithm is guaranteed to exist <i>exactly when</i> a directed graph is a DAG?",
+  fig:function(s){
+    txt(s,360,22,'DAG → a valid LINEUP exists (every arrow points RIGHT →)',{fill:'#8fe0a0','font-size':13});
+    var L={A:[90,90],B:[90,180],C:[300,135],D:[500,135]};
+    for(var k in L)node(s,L[k][0],L[k][1],k,{stroke:'#3fb950'});
+    arrow(s,90,90,300,135,{r1:22,color:'g'});
+    arrow(s,90,180,300,135,{r1:22,color:'g'});
+    arrow(s,300,135,500,135,{r1:22,color:'g'});
+    txt(s,300,235,'topological order:  A, B, C, D  ✓',{fill:'#fff','font-size':13,'font-weight':600});
+
+    box(s,560,70,140,130,{stroke:'#f85149',dash:'5,4'});
+    node(s,600,110,'X',{});node(s,660,110,'Y',{});node(s,630,165,'Z',{});
+    arrow(s,600,110,660,110,{r1:22,color:'r'});
+    arrow(s,660,110,630,165,{r1:22,color:'r'});
+    arrow(s,630,165,600,110,{r1:22,color:'r'});
+    txt(s,630,225,'has a cycle',{fill:'#f88','font-size':11});
+    txt(s,630,242,'→ NO topo order',{fill:'#f88','font-size':11});
+  },
+  sol:"<p><span class='key'>Directed Acyclic Graph.</span> A <b>topological sort</b> exists if and only if the directed graph is a DAG. Lay every node on a line; a valid order is one where every edge points rightward. A cycle makes that impossible (each node in the cycle would have to come before itself).</p><p>This is the bridge you already crossed: Kahn's <i>short-lineup-is-a-cycle</i> check (<code>len(order) &lt; n</code>) and the DFS <i>back-edge</i> check both detect the same thing — the absence of a topo order.</p>"},
+
+{ tag:"Terminology · Trees",
+  q:"A connected undirected graph has exactly <b>V−1 edges</b>. Must it be a tree? What if instead it's <b>acyclic</b> with V−1 edges?",
+  fig:function(s){
+    txt(s,175,24,'connected + (V−1) edges',{fill:'#8fe0a0','font-size':12});
+    var T={A:[100,80],B:[250,70],C:[100,200],D:[250,200]};
+    line(s,100,80,250,70,{stroke:'#3fb950',sw:2.4});line(s,100,80,100,200,{stroke:'#3fb950',sw:2.4});line(s,250,70,250,200,{stroke:'#3fb950',sw:2.4});
+    for(var k in T)node(s,T[k][0],T[k][1],k,{stroke:'#3fb950'});
+    txt(s,175,250,'4 nodes, 3 edges → TREE ✓',{fill:'#8fe0a0','font-size':12,'font-weight':600});
+
+    txt(s,540,24,'3 edges but NOT a tree',{fill:'#f0b36b','font-size':12});
+    var U={A:[460,80],B:[610,70],C:[535,190]};
+    line(s,460,80,610,70,{stroke:'#f85149',sw:2.4});line(s,610,70,535,190,{stroke:'#f85149',sw:2.4});line(s,535,190,460,80,{stroke:'#f85149',sw:2.4});
+    for(var k2 in U)node(s,U[k2][0],U[k2][1],k2,{stroke:'#f85149'});
+    node(s,660,190,'D',{stroke:'#555'});
+    txt(s,540,250,'triangle (cycle) + isolated D',{fill:'#f88','font-size':11.5});
+    txt(s,540,268,'4 nodes, 3 edges, disconnected ✗',{fill:'#f88','font-size':11.5});
+  },
+  sol:"<p><b>Both are trees.</b> A tree is any two of these three that forces the third: <i>connected</i>, <i>acyclic</i>, <i>exactly V−1 edges</i>.</p><p class='key'>Connected + (V−1 edges) ⇒ acyclic ⇒ tree. Acyclic + (V−1 edges) ⇒ connected ⇒ tree.</p><p>But V−1 edges <b>alone</b> guarantees nothing — the right panel has 4 nodes and 3 edges yet is a triangle (a cycle) plus an isolated node, so it's neither connected nor acyclic. You need one of the other two properties alongside the edge count.</p>"},
+
+{ tag:"Terminology · Connectivity (directed)",
+  q:"Distinguish <b>strongly connected</b> from <b>weakly connected</b>. Give a 3-node example that's weakly but not strongly connected.",
+  fig:function(s){
+    txt(s,175,24,'WEAKLY connected',{fill:'#f0b36b','font-size':12});
+    var W={A:[90,140],B:[230,140],C:[370,140]};
+    node(s,90,140,'A',{});node(s,230,140,'B',{});node(s,370,140,'C',{});
+    arrow(s,90,140,230,140,{r1:22,color:'default'});
+    arrow(s,230,140,370,140,{r1:22,color:'default'});
+    txt(s,230,190,'A→B→C: underlying links connect all,',{fill:'#f0cf8a','font-size':11.5});
+    txt(s,230,208,'but you can never get back C→A',{fill:'#f88','font-size':11.5});
+    arrow(s,370,175,90,175,{r1:0,r2:0,color:'r',dash:'6,5'});
+    txt(s,230,240,'no return path ✗',{fill:'#f88','font-size':11});
+
+    txt(s,585,24,'STRONGLY connected',{fill:'#8fe0a0','font-size':12});
+    var cx=585,cy=150,R=70;
+    var P=[[cx,cy-R],[cx+R,cy+R*0.6],[cx-R,cy+R*0.6]];
+    node(s,P[0][0],P[0][1],'A',{stroke:'#3fb950'});node(s,P[1][0],P[1][1],'B',{stroke:'#3fb950'});node(s,P[2][0],P[2][1],'C',{stroke:'#3fb950'});
+    arrow(s,P[0][0],P[0][1],P[1][0],P[1][1],{r1:22,color:'g'});
+    arrow(s,P[1][0],P[1][1],P[2][0],P[2][1],{r1:22,color:'g'});
+    arrow(s,P[2][0],P[2][1],P[0][0],P[0][1],{r1:22,color:'g'});
+    txt(s,585,265,'A→B→C→A: every node reaches every other ✓',{fill:'#8fe0a0','font-size':11});
+  },
+  sol:"<p><b>Strongly connected:</b> for <i>every</i> ordered pair (u,v) there's a directed path u→…→v <b>and</b> v→…→u. <b>Weakly connected:</b> the graph is connected only if you <i>ignore edge directions</i> (replace every arc with an undirected edge).</p><p><span class='key'>Example:</span> A→B→C. Underlying undirected it's one connected path (weakly connected), but there's no directed way from C back to A, so it is <b>not</b> strongly connected. Add C→A and it becomes strongly connected.</p>"},
+
+{ tag:"Terminology · Bipartite",
+  q:"Give two <b>equivalent definitions</b> of a bipartite graph — one via coloring, one via cycles.",
+  fig:function(s){
+    txt(s,175,24,'EVEN cycle C₄ → 2-colorable ✓',{fill:'#8fe0a0','font-size':12});
+    var q=[[90,80],[260,80],[260,220],[90,220]];
+    var col=['#3b82f6','#f85149','#3b82f6','#f85149'];
+    line(s,90,80,260,80,{stroke:'#7a7a8c',sw:2});line(s,260,80,260,220,{stroke:'#7a7a8c',sw:2});
+    line(s,260,220,90,220,{stroke:'#7a7a8c',sw:2});line(s,90,220,90,80,{stroke:'#7a7a8c',sw:2});
+    ['A','B','C','D'].forEach(function(l,i){node(s,q[i][0],q[i][1],l,{fill:col[i],stroke:col[i]});});
+    txt(s,175,260,'blue/red alternate cleanly',{fill:'#8fe0a0','font-size':11});
+
+    txt(s,560,24,'ODD cycle C₃ → conflict ✗',{fill:'#f0b36b','font-size':12});
+    var tp=[[560,80],[660,190],[460,190]];
+    line(s,tp[0][0],tp[0][1],tp[1][0],tp[1][1],{stroke:'#7a7a8c',sw:2});
+    line(s,tp[1][0],tp[1][1],tp[2][0],tp[2][1],{stroke:'#f85149',sw:3});
+    line(s,tp[2][0],tp[2][1],tp[0][0],tp[0][1],{stroke:'#7a7a8c',sw:2});
+    node(s,tp[0][0],tp[0][1],'A',{fill:'#3b82f6',stroke:'#3b82f6'});
+    node(s,tp[2][0],tp[2][1],'B',{fill:'#f85149',stroke:'#f85149'});
+    node(s,tp[1][0],tp[1][1],'C?',{fill:'#20202e',stroke:'#f85149'});
+    txt(s,560,255,'C touches blue AND red',{fill:'#f88','font-size':11});
+    txt(s,560,272,'no valid color',{fill:'#f88','font-size':11});
+  },
+  sol:"<p><b>(1) Coloring:</b> the vertices can be split into two sets so every edge goes <i>between</i> the sets — equivalently, the graph is 2-colorable with no edge joining same-colored nodes.</p><p><b>(2) Cycles:</b> the graph contains <b>no odd-length cycle</b>.</p><p class='key'>They're the same fact:</p> an odd cycle forces a color clash (walk it alternating colors and the last node collides with the first), while any graph with only even cycles can be 2-colored by BFS/DFS layering. This is exactly what a bipartite <b>check</b> does — BFS/DFS coloring, fail on a same-color edge.</p>"},
+
+{ tag:"Representations · Space", flag:"⚑ your recurring slip",
+  q:"Space of adjacency <b>list</b> vs <b>matrix</b> in V and E? For <b>V = 10,000,000 nodes and 0 edges</b>, how much does each use?",
+  fig:function(s){
+    box(s,60,60,290,220,{stroke:'#f85149'});
+    txt(s,205,88,'ADJACENCY MATRIX',{fill:'#f88','font-size':13,'font-weight':700});
+    txt(s,205,112,'O(V²)  —  ALWAYS',{fill:'#fff','font-size':14});
+    add(s,'rect',{x:90,y:130,width:230,height:110,fill:'rgba(248,81,73,.22)',stroke:'#f85149','stroke-width':1});
+    txt(s,205,175,'V² = 100,000,000,000,000',{fill:'#fff','font-size':14,'font-weight':700});
+    txt(s,205,200,'(100 trillion cells)',{fill:'#f0b36b','font-size':12});
+    txt(s,205,224,'even with ZERO edges',{fill:'#f88','font-size':12});
+
+    box(s,390,60,290,220,{stroke:'#3fb950'});
+    txt(s,535,88,'ADJACENCY LIST',{fill:'#8fe0a0','font-size':13,'font-weight':700});
+    txt(s,535,112,'O(V + E)',{fill:'#fff','font-size':14});
+    add(s,'rect',{x:420,y:200,width:230,height:40,fill:'rgba(63,185,80,.22)',stroke:'#3fb950','stroke-width':1});
+    txt(s,535,222,'V + E = 10,000,000',{fill:'#fff','font-size':14,'font-weight':700});
+    txt(s,535,262,'edges never inflate it',{fill:'#8fe0a0','font-size':12});
+  },
+  sol:"<p><span class='key'>List: O(V + E). Matrix: O(V²).</span></p><p>For 10M nodes, 0 edges: the <b>list</b> stores V empty buckets ≈ <b>10 million</b> slots. The <b>matrix</b> reserves a cell for every possible pair ≈ <b>100 trillion</b> cells — regardless of edges.</p><p class='bad'>Your recurring trap:</p> sizing the matrix by edge count. A matrix is a V×V seating grid; the seats exist whether or not anyone shakes hands. <i>List = Lean (sparse), Matrix = Massive (V², dense).</i></p>"},
+
+{ tag:"Representations · Edge query",
+  q:"You must answer \"is there an edge u–v?\" millions of times. <b>Which representation</b>, and the query cost in each?",
+  fig:function(s){
+    txt(s,175,24,'MATRIX: one lookup',{fill:'#8fe0a0','font-size':12});
+    matrix(s,90,60,[[0,1,0,1],[1,0,1,0],[0,1,0,1],[1,0,1,0]],{hi:new Set(['1,3']),cw:34,ch:30});
+    txt(s,175,210,'M[u][v] → O(1)  ✓ superpower',{fill:'#8fe0a0','font-size':12,'font-weight':600});
+
+    txt(s,530,24,'LIST: scan the bucket',{fill:'#f0b36b','font-size':12});
+    var vals=['3','7','v','2','9'];
+    vals.forEach(function(vv,i){var hit=vv==='v';box(s,410+i*54,80,48,34,{stroke:hit?'#e0b341':'#3a3a52',fill:hit?'rgba(224,179,65,.2)':'#20202e'});txt(s,410+i*54+24,97,vv,{fill:hit?'#e0b341':'#fff','font-size':13});});
+    txt(s,530,55,'adj[u] =',{fill:'#9aa4c4','font-size':12});
+    txt(s,530,150,'walk until you find v',{fill:'#f0cf8a','font-size':12});
+    txt(s,530,170,'→ O(degree(u))',{fill:'#f0b36b','font-size':13,'font-weight':600});
+  },
+  sol:"<p><span class='key'>Choose the matrix</span> for edge-existence-heavy work. <b>Matrix: O(1)</b> — a single <code>M[u][v]</code> read. <b>List: O(degree(u))</b> — you must scan u's neighbor bucket looking for v.</p><p>This O(1) membership test is the matrix's <b>one genuine superpower</b> and the reason it survives despite the V² space cost — problems like Maximal Network Rank lean on it (or a hash set of edges to get O(1) without the full V² grid).</p>"},
+
+{ tag:"Representations · Neighbor iteration", flag:"⚑ your recurring slip",
+  q:"To iterate over <b>all neighbors of node u</b>: cost in an adjacency list vs a matrix? Answer in the right <i>currency</i>.",
+  fig:function(s){
+    txt(s,175,24,'LIST: pay per FRIEND',{fill:'#8fe0a0','font-size':12});
+    var f=['2','5','9'];
+    f.forEach(function(vv,i){box(s,70+i*70,70,56,40,{stroke:'#3fb950',fill:'rgba(63,185,80,.15)'});txt(s,70+i*70+28,90,vv,{'font-size':14});});
+    txt(s,175,140,'walk 3 real neighbors',{fill:'#8fe0a0','font-size':12});
+    txt(s,175,162,'→ O(degree(u))',{fill:'#8fe0a0','font-size':14,'font-weight':700});
+
+    txt(s,540,24,'MATRIX: pay per SEAT',{fill:'#f0b36b','font-size':12});
+    var row=[0,0,1,0,0,0,1,0];
+    row.forEach(function(vv,i){var one=vv===1;box(s,360+i*40,70,34,40,{stroke:one?'#e0b341':'#3a3a52',fill:one?'rgba(224,179,65,.2)':'#161620'});txt(s,360+i*40+17,90,String(vv),{fill:one?'#e0b341':'#5a5a6a','font-size':13});});
+    txt(s,540,140,'scan ALL V cells, skip the 0s',{fill:'#f0cf8a','font-size':12});
+    txt(s,540,162,'→ O(V)   (worse when sparse)',{fill:'#f0b36b','font-size':14,'font-weight':700});
+  },
+  sol:"<p><span class='key'>List: O(degree(u)). Matrix: O(V).</span></p><p>The list stores only the neighbors that actually exist, so you pay <b>per friend</b> (degree). The matrix row has a slot for every node, so you scan <b>per seat</b> (V) and step over all the zeros.</p><p class='bad'>Your recurring trap:</p> pricing list operations in V. In a V=100k, E=200k graph the average degree is ~4 — the list iterates ~4, the matrix row scans 100,000. The list exists <i>precisely</i> to avoid that O(V) row-scan. (A celebrity node with degree V−1 is the one case they coincide.)</p>"},
+
+{ tag:"Representations · Choosing",
+  q:"V = 100k, E = 200k — which representation and why? Now V = 2,000, E = 3,900,000 — does it change?",
+  fig:function(s){
+    box(s,50,50,300,240,{stroke:'#3fb950'});
+    txt(s,200,78,'V=100k · E=200k',{fill:'#fff','font-size':14,'font-weight':700});
+    txt(s,200,108,'density E/V² ≈ 0.00002',{fill:'#9aa4c4','font-size':12});
+    txt(s,200,138,'list:   V+E ≈ 300,000',{fill:'#8fe0a0','font-size':13});
+    txt(s,200,162,'matrix: V² = 10,000,000,000',{fill:'#f88','font-size':13});
+    add(s,'rect',{x:80,y:190,width:240,height:66,rx:8,fill:'rgba(63,185,80,.15)',stroke:'#3fb950'});
+    txt(s,200,215,'SPARSE → ADJACENCY LIST',{fill:'#8fe0a0','font-size':14,'font-weight':700});
+    txt(s,200,238,'33,000× smaller',{fill:'#8fe0a0','font-size':12});
+
+    box(s,370,50,300,240,{stroke:'#e0b341'});
+    txt(s,520,78,'V=2,000 · E=3.9M',{fill:'#fff','font-size':14,'font-weight':700});
+    txt(s,520,108,'density E/V² ≈ 0.975',{fill:'#9aa4c4','font-size':12});
+    txt(s,520,138,'matrix: V² = 4,000,000',{fill:'#f0cf8a','font-size':13});
+    txt(s,520,162,'near-complete (max ≈ 4M)',{fill:'#9aa4c4','font-size':12});
+    add(s,'rect',{x:400,y:190,width:240,height:66,rx:8,fill:'rgba(224,179,65,.15)',stroke:'#e0b341'});
+    txt(s,520,215,'DENSE → ADJACENCY MATRIX',{fill:'#f0cf8a','font-size':14,'font-weight':700});
+    txt(s,520,238,'O(1) edge query, same space anyway',{fill:'#f0cf8a','font-size':11});
+  },
+  sol:"<p><b>V=100k, E=200k → adjacency list.</b> Density is ~0.00002; the matrix would waste 10 billion cells to store 200k edges. This is a textbook sparse graph.</p><p><b>V=2,000, E=3.9M → adjacency matrix.</b> The max possible directed edges is 2000·1999 ≈ 4M, so this is ~98% complete — genuinely dense. The matrix is only 4M cells (fine), and you get O(1) edge queries for free. Rule of thumb: <span class='key'>E close to V² → matrix; E close to V → list.</span></p>"},
+
+{ tag:"Representations · Spot the bug", flag:"⚑ your recurring slip",
+  q:"What breaks here, and what's the runtime symptom?<pre style='background:#101018;border:1px solid #2a2a3a;border-radius:6px;padding:8px;font-size:12px;color:#cfe0ff;margin-top:8px'>adj = {}\nfor i in range(n):\n    adj[str(i)] = []      # pre-register nodes\nfor u, v in edges:        # u, v are ints\n    adj[u].append(v)\n    adj[v].append(u)</pre>",
+  fig:function(s){
+    txt(s,360,26,"To a dict, 1 and '1' are DIFFERENT keys",{fill:'#f88','font-size':14,'font-weight':700});
+    box(s,80,60,250,110,{stroke:'#f85149'});
+    txt(s,205,86,"key  '1'  (string)",{fill:'#f0b36b','font-size':13});
+    txt(s,205,116,'value = [ ]',{fill:'#9aa4c4','font-size':13});
+    txt(s,205,146,'from str(i) pre-register',{fill:'#7f7f95','font-size':11});
+
+    box(s,390,60,250,110,{stroke:'#e0b341'});
+    txt(s,515,86,'key  1  (int)',{fill:'#f0cf8a','font-size':13});
+    txt(s,515,116,'value = [2, 0, 4]',{fill:'#fff','font-size':13});
+    txt(s,515,146,'from int edges',{fill:'#7f7f95','font-size':11});
+
+    txt(s,360,205,"1 == '1'  →  False",{fill:'#f85149','font-size':15,'font-weight':700});
+    txt(s,360,238,'The pre-registered isolated nodes sit under string keys;',{fill:'#d6d6e6','font-size':12});
+    txt(s,360,256,'edges create separate int keys. A node ends up counted twice',{fill:'#d6d6e6','font-size':12});
+    txt(s,360,274,'— or an isolated node is silently lost on lookup adj[i].',{fill:'#d6d6e6','font-size':12});
+  },
+  sol:"<p><span class='bad'>Key-type mismatch.</span> The pre-registration uses <code>str(i)</code> (e.g. <code>'1'</code>) but the edges use <b>int</b> labels (<code>1</code>). Since <code>1 == '1'</code> is <code>False</code>, <code>adj['1']</code> and <code>adj[1]</code> are two different dict entries.</p><p><b>Symptom:</b> isolated nodes you meant to register stay empty under string keys, while real adjacency lands under int keys — so iterating <code>adj</code> double-counts nodes, and a lookup like <code>adj[i]</code> (int) misses the pre-seeded isolated node. Fix: use one consistent key type, e.g. <code>adj[i] = []</code> (int) to match the edges.</p>"},
+
+{ tag:"Representations · Index vs value", flag:"⚑ 5× — the big one",
+  q:"Extracting neighbors of i from matrix M: <code>[nb for nb in M[i] if M[i][nb] == 1]</code>. On <code>M[2]=[1,0,1,1,0]</code>, what does it return? Correct one-liner?",
+  fig:function(s){
+    txt(s,360,22,'A row is a STREET. Value = PORCH LIGHT. Neighbor = HOUSE NUMBER.',{fill:'#f0b36b','font-size':12.5});
+    var row=[1,0,1,1,0];
+    row.forEach(function(v,i){
+      var x=110+i*100;
+      box(s,x,55,70,60,{stroke:i===2?'#e0b341':'#3a3a52'});
+      txt(s,x+35,80,v?'💡 1':'⚫ 0',{fill:v?'#e0b341':'#5a5a6a','font-size':15});
+      txt(s,x+35,132,'#'+i,{fill:'#9aa4c4','font-size':13,'font-weight':700});
+      txt(s,x+35,150,i===2?'(self)':'',{fill:'#7f7f95','font-size':10});
+    });
+    txt(s,360,185,"BROKEN: nb walks the LIGHTS [1,0,1,1,0] → only ever peeks houses 0 and 1",{fill:'#f88','font-size':12});
+    txt(s,360,205,"M[2][1]=0 skip · M[2][0]=1 emit 0 · … → returns [0, 0]   (houses 2,3,4 never examined!)",{fill:'#f88','font-size':11.5});
+    txt(s,360,238,"CORRECT: read the MAILBOX number → indices with light on, minus the self",{fill:'#8fe0a0','font-size':12});
+    txt(s,360,258,"[j for j, val in enumerate(M[2]) if val == 1 and j != 2]  →  [0, 3]",{fill:'#8fe0a0','font-size':12.5,'font-weight':600});
+    txt(s,360,290,"SMELL: if the thing you index with can only be 0 or 1, you're using a light switch as an address.",{fill:'#f0b36b','font-size':11.5});
+  },
+  sol:"<p><span class='bad'>Returns [0, 0].</span> <code>nb</code> iterates the row's <b>values</b> (1,0,1,1,0), so <code>M[2][nb]</code> only ever indexes columns 0 and 1 — columns 2, 3, 4 are never looked at, real neighbor #3 is dropped, and #0 is emitted twice.</p><pre><code>[j for j, val in enumerate(M[i]) if val == 1 and j != i]   # → [0, 3]</code></pre><p><span class='key'>enumerate hands you both:</span> the <b>index is the answer</b>, the <b>value is the test</b>. Exclude the diagonal (<code>j != i</code>) to drop the self-loop. Your smell-detector: if the thing you index with can only be 0 or 1, you're using a light switch as an address.</p>"},
+
+{ tag:"Representations · Building",
+  q:"Building an adjacency list: the one-line difference between an <b>undirected</b> edge (u,v) vs a <b>directed</b> edge u→v?",
+  fig:function(s){
+    txt(s,175,30,'UNDIRECTED (u,v)',{fill:'#8fe0a0','font-size':13,'font-weight':700});
+    node(s,100,120,'u',{stroke:'#3fb950'});node(s,270,120,'v',{stroke:'#3fb950'});
+    arrow(s,100,112,270,112,{r1:22,r2:22,color:'g'});
+    arrow(s,270,128,100,128,{r1:22,r2:22,color:'g'});
+    txt(s,185,185,'adj[u].append(v)',{fill:'#cfe0ff','font-size':12.5});
+    txt(s,185,205,'adj[v].append(u)',{fill:'#cfe0ff','font-size':12.5});
+    txt(s,185,230,'BOTH directions',{fill:'#8fe0a0','font-size':12,'font-weight':600});
+
+    txt(s,540,30,'DIRECTED u→v',{fill:'#f0cf8a','font-size':13,'font-weight':700});
+    node(s,460,120,'u',{stroke:'#e0b341'});node(s,630,120,'v',{stroke:'#e0b341'});
+    arrow(s,460,120,630,120,{r1:22,r2:22,color:'default'});
+    txt(s,545,185,'adj[u].append(v)',{fill:'#cfe0ff','font-size':12.5});
+    txt(s,545,210,'ONE direction only',{fill:'#f0cf8a','font-size':12,'font-weight':600});
+  },
+  sol:"<p><b>Undirected:</b> append <i>both</i> ways —<pre><code>adj[u].append(v)\nadj[v].append(u)</code></pre></p><p><b>Directed:</b> append <i>one</i> way — just <code>adj[u].append(v)</code>.</p><p>That single extra line is the whole difference at the data-structure level. Forgetting it (adding only one direction on an undirected graph) is a classic silent bug: traversals then mysteriously fail to reach nodes that are 'obviously' connected.</p>"},
+
+{ tag:"Representations · Edge list",
+  q:"Name the <b>third</b> common representation (besides list and matrix), and two algorithms that specifically prefer it.",
+  fig:function(s){
+    txt(s,120,26,'adjacency list',{fill:'#9aa4c4','font-size':12});
+    txt(s,120,52,'0: [1,2]',{fill:'#cfe0ff','font-size':12});txt(s,120,72,'1: [2]',{fill:'#cfe0ff','font-size':12});txt(s,120,92,'2: [ ]',{fill:'#cfe0ff','font-size':12});
+
+    txt(s,360,26,'matrix',{fill:'#9aa4c4','font-size':12});
+    matrix(s,320,50,[[0,1,1],[0,0,1],[0,0,0]],{cw:28,ch:24});
+
+    box(s,500,40,200,120,{stroke:'#e0b341'});
+    txt(s,600,62,'EDGE LIST ★',{fill:'#f0cf8a','font-size':13,'font-weight':700});
+    txt(s,600,90,'(0,1,w)',{fill:'#fff','font-size':13});
+    txt(s,600,112,'(0,2,w)',{fill:'#fff','font-size':13});
+    txt(s,600,134,'(1,2,w)',{fill:'#fff','font-size':13});
+
+    txt(s,360,210,'Prefers a flat list of (u, v, weight):',{fill:'#d6d6e6','font-size':13});
+    txt(s,360,236,'• Kruskal MST — SORT all edges by weight, add cheapest',{fill:'#8fe0a0','font-size':12.5});
+    txt(s,360,258,'• Bellman-Ford — RELAX every edge, V−1 times',{fill:'#8fe0a0','font-size':12.5});
+    txt(s,360,280,'• Union-Find problems — feed edges straight in',{fill:'#8fe0a0','font-size':12.5});
+  },
+  sol:"<p><span class='key'>The edge list</span> — just a flat collection of <code>(u, v, weight)</code> triples, O(E) space.</p><p>It shines when the algorithm iterates over <b>edges</b> rather than over a node's neighbors:</p><p>• <b>Kruskal's MST</b> — sort all edges by weight, then add the cheapest that doesn't form a cycle (pairs perfectly with Union-Find).<br>• <b>Bellman-Ford</b> — relax every edge, repeated V−1 times.</p><p>Your DSU problems (684, 1319, …) also consume edges directly in this form.</p>"}
+];
+
+/* ======================= ENGINE ======================= */
+var cur=0, revealed=CARDS.map(function(){return false;});
+var dots=document.getElementById('dots');
+CARDS.forEach(function(_,i){var d=document.createElement('div');d.className='dot';d.textContent=i+1;d.onclick=function(){cur=i;render();};dots.appendChild(d);});
+function render(){
+  var c=CARDS[cur];
+  document.getElementById('qn').textContent='Question '+(cur+1)+' / 15';
+  var tags='<span class="tag">'+c.tag+'</span>'+(c.flag?'<span class="flag">'+c.flag+'</span>':'');
+  document.getElementById('tags').innerHTML=tags;
+  document.getElementById('qt').innerHTML=c.q;
+  while(svg.firstChild)svg.removeChild(svg.firstChild);
+  defs(svg); c.fig(svg);
+  var sol=document.getElementById('sol');
+  sol.innerHTML=c.sol; sol.hidden=!revealed[cur];
+  document.getElementById('show').textContent=revealed[cur]?'Hide solution':'Show solution';
+  Array.prototype.forEach.call(dots.children,function(d,i){d.className='dot'+(i===cur?' active':'')+(revealed[i]?' done':'');});
+}
+document.getElementById('prev').onclick=function(){cur=(cur-1+CARDS.length)%CARDS.length;render();};
+document.getElementById('next').onclick=function(){cur=(cur+1)%CARDS.length;render();};
+document.getElementById('show').onclick=function(){revealed[cur]=!revealed[cur];render();};
+document.addEventListener('keydown',function(e){
+  if(e.key==='ArrowLeft'){cur=(cur-1+CARDS.length)%CARDS.length;render();}
+  else if(e.key==='ArrowRight'){cur=(cur+1)%CARDS.length;render();}
+  else if(e.key===' '){e.preventDefault();revealed[cur]=!revealed[cur];render();}
+});
+render();
+</script>
+</body>
+</html>

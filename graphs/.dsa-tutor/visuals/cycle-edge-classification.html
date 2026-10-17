@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Back edge vs Cross edge — why one is a cycle and one isn't</title>
+<style>
+  body{margin:0;background:#15151f;color:#eee;font:15px/1.5 -apple-system,Segoe UI,Roboto,sans-serif}
+  .wrap{max-width:760px;margin:0 auto;padding:24px}
+  h1{font-size:19px;margin:0 0 4px}
+  .desc{color:#aaa;margin:0 0 16px}
+  #stage{background:#1d1d2a;border:1px solid #333;border-radius:10px}
+  svg{width:100%;height:auto;display:block}
+  .narration{min-height:24px;margin:12px 0;color:#cfcfe0;font-size:15px}
+  .controls{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  button{background:#2b2b3a;color:#eee;border:1px solid #555;border-radius:6px;padding:6px 12px;cursor:pointer}
+  button:hover{border-color:#e0b341}
+  .counter{margin-left:auto;color:#888}
+  .quiz{margin-top:16px;background:#1d1d2a;border:1px solid #3a3a4a;border-radius:10px;padding:14px}
+  .quiz .q{font-weight:600;margin-bottom:8px}
+  .quiz button{margin:4px 6px 4px 0}
+  .reveal{margin-top:10px;color:#cfcfe0}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Two edges land on a seen node — one is a cycle, one isn't</h1>
+  <p class="desc">Directed DFS from node 1. Watch the colors. The edge <b>3→1</b> and the edge <b>4→3</b> both point at an already-visited node — but only one is a cycle. The color of the target decides it.</p>
+  <div id="stage"><svg id="svg" viewBox="0 0 640 360"></svg></div>
+  <div class="narration" id="narration">—</div>
+  <div class="controls">
+    <button id="prev">◀ Prev</button>
+    <button id="play">▶ Play</button>
+    <button id="step">Step ▶|</button>
+    <button id="reset">⟲ Reset</button>
+    <label>Speed <input id="speed" type="range" min="300" max="1600" value="950"></label>
+    <span class="counter" id="counter"></span>
+  </div>
+  <div class="quiz" id="quiz" hidden>
+    <div class="q" id="qtext"></div>
+    <div id="qopts"></div>
+    <div class="reveal" id="reveal" hidden></div>
+  </div>
+</div>
+<script>
+const SVG="http://www.w3.org/2000/svg";
+const svg=document.getElementById('svg');
+function el(t,a){const e=document.createElementNS(SVG,t);for(const k in a)e.setAttribute(k,a[k]);return e;}
+function clear(){while(svg.firstChild)svg.removeChild(svg.firstChild);}
+
+const narration=document.getElementById('narration'),counter=document.getElementById('counter');
+const quiz=document.getElementById('quiz'),qtext=document.getElementById('qtext'),qopts=document.getElementById('qopts'),reveal=document.getElementById('reveal');
+const playBtn=document.getElementById('play'),speed=document.getElementById('speed');
+let STEPS=[],idx=0,timer=null;
+function render(){const s=STEPS[idx];s.draw();narration.textContent=s.note||'';counter.textContent=(idx+1)+' / '+STEPS.length;
+  if(s.question)showQuestion(s.question);else quiz.hidden=true;}
+function showQuestion(q){quiz.hidden=false;qtext.textContent=q.prompt;reveal.hidden=true;qopts.innerHTML='';
+  q.options.forEach((o,i)=>{const b=document.createElement('button');b.textContent=o;
+    b.onclick=()=>{reveal.hidden=false;reveal.textContent=(i===q.answer?'✓ Correct. ':'✗ Not quite. ')+q.explain;};qopts.appendChild(b);});}
+function step(){if(idx<STEPS.length-1){idx++;render();}else pause();}
+function prev(){if(idx>0){idx--;render();}}
+function pause(){clearInterval(timer);timer=null;playBtn.textContent='▶ Play';}
+function play(){if(timer){pause();return;}playBtn.textContent='⏸ Pause';timer=setInterval(()=>{if(idx>=STEPS.length-1){pause();return;}step();},+speed.value);}
+function reset(){pause();idx=0;render();}
+document.getElementById('prev').onclick=prev;
+document.getElementById('step').onclick=()=>{pause();step();};
+document.getElementById('reset').onclick=reset;
+playBtn.onclick=play;
+
+/* ===== lesson ===== */
+const NODES=[{id:1,x:190,y:70},{id:2,x:110,y:215},{id:3,x:300,y:215},{id:4,x:475,y:120}];
+const EDGES=[[1,2],[2,3],[3,1],[1,4],[4,3]];
+const posOf={}; NODES.forEach(n=>posOf[n.id]=n);
+const NC={
+  white:{f:'#c7c7d1',s:'#8a8a9a',t:'#111'},
+  gray :{f:'#e0b341',s:'#ffd75e',t:'#1a1a1a'},
+  black:{f:'#20202a',s:'#4a4a5a',t:'#9a9aac'}
+};
+
+function drawDi(st){
+  clear();
+  const defs=el('defs',{});
+  defs.innerHTML='<marker id="ah" markerWidth="10" markerHeight="10" refX="8.5" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z" fill="#8b8b9e"/></marker>'+
+                 '<marker id="ahy" markerWidth="10" markerHeight="10" refX="8.5" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z" fill="#ffd75e"/></marker>'+
+                 '<marker id="ahr" markerWidth="10" markerHeight="10" refX="8.5" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z" fill="#ff5c5c"/></marker>'+
+                 '<marker id="ahg" markerWidth="10" markerHeight="10" refX="8.5" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z" fill="#5ad17a"/></marker>';
+  svg.appendChild(defs);
+  EDGES.forEach(([a,b])=>{
+    const p=posOf[a],q=posOf[b],dx=q.x-p.x,dy=q.y-p.y,len=Math.hypot(dx,dy),ux=dx/len,uy=dy/len,r=23;
+    const x1=p.x+ux*r,y1=p.y+uy*r,x2=q.x-ux*r,y2=q.y-uy*r;
+    const back=st.backEdge&&st.backEdge[0]===a&&st.backEdge[1]===b;
+    const cross=st.crossEdge&&st.crossEdge[0]===a&&st.crossEdge[1]===b;
+    const exam=st.examine&&st.examine[0]===a&&st.examine[1]===b;
+    let stroke='#7a7a8c',w=2,dash='0',mk='url(#ah)';
+    if(back){stroke='#ff5c5c';w=3.5;mk='url(#ahr)';}
+    else if(cross){stroke='#5ad17a';w=3.5;mk='url(#ahg)';}
+    else if(exam){stroke='#ffd75e';w=3;dash='5,4';mk='url(#ahy)';}
+    svg.appendChild(el('line',{x1,y1,x2,y2,stroke,'stroke-width':w,'stroke-dasharray':dash,'marker-end':mk}));
+  });
+  NODES.forEach(n=>{
+    const c=(st.colors&&st.colors[n.id])||'white',col=NC[c],cur=st.current===n.id;
+    if(cur) svg.appendChild(el('circle',{cx:n.x,cy:n.y,r:28,fill:'none',stroke:'#ff9d5c','stroke-width':2}));
+    svg.appendChild(el('circle',{cx:n.x,cy:n.y,r:23,fill:col.f,stroke:col.s,'stroke-width':2}));
+    const t=el('text',{x:n.x,y:n.y+6,'text-anchor':'middle',fill:col.t,'font-size':16,'font-weight':'700'});
+    t.textContent=n.id;svg.appendChild(t);
+  });
+  const lg=[['#c7c7d1','White=unseen'],['#e0b341','Gray=on path'],['#20202a','Black=done']];
+  lg.forEach((L,i)=>{const y=343,x=40+i*195;
+    svg.appendChild(el('circle',{cx:x,cy:y,r:8,fill:L[0],stroke:'#888','stroke-width':1}));
+    const t=el('text',{x:x+14,y:y+4,fill:'#bbb','font-size':11.5});t.textContent=L[1];svg.appendChild(t);});
+}
+
+function buildSteps(){
+  const S=[];
+  const P=(colors,current,note,extra)=>S.push(Object.assign({draw:()=>drawDi(Object.assign({colors,current},extra)),note},extra&&extra.question?{question:extra.question}:{}));
+  P({},null,"Graph: triangle 1→2→3→1, plus 1→4 and 4→3. DFS starts at node 1.");
+  P({1:'gray'},1,"Enter 1 → GRAY (on the path). Path so far: [1].");
+  P({1:'gray',2:'gray'},2,"1→2: enter 2 → GRAY. Path: [1, 2].");
+  P({1:'gray',2:'gray',3:'gray'},3,"2→3: enter 3 → GRAY. Path: [1, 2, 3].");
+  P({1:'gray',2:'gray',3:'gray'},3,
+    "3 now looks at its edge 3→1. Node 1 is GRAY. Predict:",
+    {examine:[3,1],question:{
+      prompt:"Edge 3→1: node 1 is GRAY (still on the path 1→2→3). Back edge or innocent?",
+      options:["Back edge → CYCLE","Innocent — just a seen node"],answer:0,
+      explain:"1 is gray = an ancestor still open on our current path. 3→1 loops back onto it → closes 1→2→3→1. That's a back edge = cycle."}});
+  P({1:'gray',2:'gray',3:'gray'},3,
+    "🔴 BACK EDGE. 1 was GRAY → CYCLE 1→2→3→1 found. (Real code returns True here — we keep stepping to judge the OTHER edge.)",
+    {backEdge:[3,1]});
+  P({1:'gray',2:'gray',3:'black'},3,"3 has no other edges → 3 is done → BLACK, pop it. Path: [1, 2].");
+  P({1:'gray',2:'black',3:'black'},2,"2 is done → BLACK, pop. Path: [1].");
+  P({1:'gray',2:'black',3:'black',4:'gray'},4,"Back at 1. Take 1→4: enter 4 → GRAY. Path: [1, 4].");
+  P({1:'gray',2:'black',3:'black',4:'gray'},4,
+    "4 looks at its edge 4→3. Node 3 is BLACK this time. Predict:",
+    {examine:[4,3],question:{
+      prompt:"Edge 4→3: node 3 is BLACK (finished, already popped). Back edge or innocent?",
+      options:["Back edge → CYCLE","Innocent — forward/cross edge"],answer:1,
+      explain:"3 is black = finished and no longer on our path — it is NOT an ancestor of 4. Landing on a done node is a forward/cross edge, not a loop back. No cycle."}});
+  P({1:'gray',2:'black',3:'black',4:'gray'},4,
+    "🟢 INNOCENT. 3 was BLACK → 4→3 is a forward/cross edge, not a cycle. Same 'edge to a seen node' — but 3 wasn't on 4's path.",
+    {crossEdge:[4,3]});
+  P({1:'black',2:'black',3:'black',4:'black'},null,
+    "Done. Exactly ONE cycle — the back edge 3→1 (target was GRAY). 4→3 was innocent (target was BLACK). Gray = cycle, Black = safe. That's the whole rule.");
+  return S;
+}
+STEPS=buildSteps();render();
+</script>
+</body>
+</html>

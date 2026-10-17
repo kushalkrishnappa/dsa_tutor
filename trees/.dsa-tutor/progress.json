@@ -1,0 +1,185 @@
+{
+  "area": "trees",
+  "last_session_date": "2026-08-15",
+  "roadmap": ".dsa-tutor/roadmap.html",
+  "current": "Lowest Common Ancestor",
+  "topics": [
+    { "name": "Tree Anatomy", "status": "done" },
+    { "name": "Representations", "status": "done" },
+    { "name": "Recursion Contract", "status": "done" },
+    { "name": "Level-Order (BFS)", "status": "done" },
+    { "name": "DFS Orders", "status": "done" },
+    { "name": "Iterative Traversal", "status": "done" },
+    { "name": "Bottom-Up Aggregate", "status": "done" },
+    { "name": "Top-Down Accumulate", "status": "done" },
+    { "name": "Structural Compare", "status": "done" },
+    { "name": "Lowest Common Ancestor", "status": "in-progress" },
+    { "name": "BST Invariant", "status": "not-started" },
+    { "name": "Inorder = Sorted", "status": "not-started" },
+    { "name": "BST Queries", "status": "not-started" },
+    { "name": "Construct from Orders", "status": "not-started" },
+    { "name": "Serialize / Deserialize", "status": "not-started" },
+    { "name": "Views & Mixed Drill", "status": "not-started" },
+    { "name": "Tries", "status": "not-started" },
+    { "name": "Morris Traversal", "status": "not-started" },
+    { "name": "AVL / Red-Black", "status": "not-started" },
+    { "name": "Segment / Fenwick", "status": "not-started" }
+  ],
+  "concepts": [
+    {
+      "name": "Tree Anatomy",
+      "mental_model": "A tree is a graph on an edge budget: N-1 edges is exactly enough to connect N nodes with zero slack.",
+      "mnemonic": "N-1 edges is exactly the budget. Spend one more and you've bought a cycle.",
+      "mastery": "solid",
+      "last_reviewed": "2026-08-13",
+      "review_interval": 3,
+      "aces": 1,
+      "past_mistakes": [
+        { "note": "Defined tree as connected but omitted acyclic; thought connected + N nodes + N edges 'depends' on cycles rather than being a guaranteed cycle (missed the N-1 edge budget).", "high_confidence": false },
+        { "note": "Said a binary-tree node has at most 2 NEIGHBOURS; conflated child-count (<=2) with graph degree (a non-root internal node has 3 neighbours: parent + 2 children).", "high_confidence": false }
+      ],
+      "visual": [],
+      "practice_done": [],
+      "calibration": { "confident_right": 1, "confident_wrong": 0, "unsure_right": 0, "unsure_wrong": 0 },
+      "taught_back": null,
+      "notes": "Day 2 warm-up (2026-08-13): correctly resolved the neighbour-vs-child-count mistake unprompted after one nudge -- confident and correct. Interval advanced 1->3."
+    },
+    {
+      "name": "Recursion Contract",
+      "mental_model": "Every node is a middle manager who knows nothing about the org below. Ask your direct reports one question, TRUST their answers without tracing into them, add yourself, report up.",
+      "mnemonic": "Ask the kids, trust them, add yourself, report up. Two blanks: IDENTITY = what nothing contributes; COMBINE = how you fold in the kids.",
+      "mastery": "solid",
+      "last_reviewed": "2026-08-11",
+      "review_interval": 3,
+      "aces": 2,
+      "past_mistakes": [
+        { "note": "When transferring the height() skeleton to count_nodes(), changed COMBINE (max->sum) but left IDENTITY at -1 (height's base case) instead of 0. Fix: IDENTITY = what an empty subtree contributes (0 for count/sum, -1 for edge-height). Self-corrected when asked to trace a leaf.", "high_confidence": false },
+        { "note": "LC-111 Min Depth: first attempt wrote the naive min(left,right)+1 and it FAILED on a one-child node (the None side returns 0, falsely claiming a depth-1 leaf). Corrected via failed submit to guard: if left==0 return right+1; elif right==0 return left+1; else min+1. RULE: min-type aggregation must SKIP absent children; max/sum are immune. A 0 return means 'empty' (real nodes return >=1), so it doubles as 'is this child absent?'. RESURFACE as a 10s check at next session start.", "high_confidence": true }
+      ],
+      "visual": [".dsa-tutor/visuals/recursion-contract.html"],
+      "practice_done": ["own:count_nodes", "own:sum_values", "LC-104", "LC-111", "LC-226"],
+      "calibration": { "confident_right": 2, "confident_wrong": 1, "unsure_right": 0, "unsure_wrong": 0 },
+      "taught_back": "2026-08-11",
+      "notes": "Strong Feynman teach-back on 2026-08-11: articulated locality, postorder link, both blanks. Two IDENTITY-finding tools: direct ('what does empty contribute', for sum/count) and backsolve-from-leaf (for height/-1). LC-111 was confident-wrong then self-corrected via failing submit; learner articulated the general min-needs-guard rule well AFTER correcting -- understanding is solid, but flagged high_confidence to verify retention next session. RETENTION CONFIRMED 2026-08-13 warm-up: precisely explained why a None child's 0 masquerades as a valid shortest path inside min()."
+    },
+    {
+      "name": "if-node-is-None idiom",
+      "mental_model": "'is None' asks 'is anyone home?'; 'not node' asks 'do I like what's home?'. On a tree, disliking a node deletes its whole subtree via early return.",
+      "mnemonic": "Check absence with 'is None', never truthiness -- __bool__/__len__ can make a real node falsy and amputate its descendants.",
+      "mastery": "solid",
+      "last_reviewed": "2026-08-13",
+      "review_interval": 7,
+      "aces": 2,
+      "past_mistakes": [],
+      "visual": [],
+      "practice_done": [],
+      "calibration": { "confident_right": 2, "confident_wrong": 0, "unsure_right": 0, "unsure_wrong": 0 },
+      "taught_back": null,
+      "notes": "Learner drove a live repro: added __bool__ returning self.val!=0, saw count/sum drop on a tree containing 0, understood the early-return amputates the subtree. Also learned truth-test precedence: __bool__ wins; __len__ is only the fallback when __bool__ is absent. Unscheduled recall on 2026-08-13 (mid-work question about 'if not node'): correctly stated __bool__-first, __len__-fallback precedence unprompted, confident and correct -- interval advanced 3->7."
+    },
+    {
+      "name": "DFS Orders",
+      "mental_model": "One depth-first walk; slide the visit() line to one of three slots in a node's frame. Root-first = preorder, root-middle = inorder, root-last = postorder.",
+      "mnemonic": "pre/in/post = where the root sits: first, middle, last. Postorder == recursion-contract order (kids before parent).",
+      "mastery": "solid",
+      "last_reviewed": "2026-08-11",
+      "review_interval": 3,
+      "aces": 1,
+      "past_mistakes": [],
+      "visual": [".dsa-tutor/visuals/dfs-orders.html"],
+      "practice_done": ["LC-144", "LC-94", "LC-145"],
+      "calibration": { "confident_right": 1, "confident_wrong": 0, "unsure_right": 0, "unsure_wrong": 0 },
+      "taught_back": null,
+      "notes": "Confidently reasoned WHY postorder computes height and connected it to the recursion contract. Practiced all three recursive orders (LC-144/94/145) on 2026-08-11. Iterative production still pending (Day 2 warm-up). Interview tells taught: 'node depends on children -> postorder; child depends on parent -> preorder'."
+    },
+    {
+      "name": "Level-Order (BFS)",
+      "mental_model": "Ripples in a pond / floor-by-floor. Queue (FIFO). To group by level, the level_size = len(q) snapshot is a FENCE between 'this level' and the children about to be enqueued.",
+      "mnemonic": "Snapshot len(q) BEFORE the inner loop -- it fences this level off from the next. Drop the fence (while q) and all levels collapse into one.",
+      "mastery": "solid",
+      "last_reviewed": "2026-08-11",
+      "review_interval": 3,
+      "aces": 1,
+      "past_mistakes": [
+        { "note": "First level_order draft omitted the empty-tree guard: deque([None]) is non-empty, so None.val throws AttributeError. Fix: 'if node is None: return []' at top. An empty tree is a legal tree -- every traversal needs its empty-input guard.", "high_confidence": false }
+      ],
+      "visual": [],
+      "practice_done": ["own:level_order", "LC-102"],
+      "calibration": { "confident_right": 1, "confident_wrong": 0, "unsure_right": 0, "unsure_wrong": 0 },
+      "taught_back": null,
+      "notes": "Wrote correct list-of-lists BFS with proper level-batching from the idea. Explained mechanism + consequence. Only gap was empty-root guard. Practiced LC-102 on 2026-08-11. INTERVIEW TELL learned: 'nearest / shallowest / fewest-steps-to-X' -> BFS (explores by distance, early-exits at first hit) -- same instinct as BFS-shortest-path in graphs. Caveat: BFS queue is O(width) memory vs DFS stack O(height). Heuristic refined: it's min DEPTH/DISTANCE, not min VALUE."
+    },
+    {
+      "name": "Iterative Traversal",
+      "mental_model": "Recursion is a hidden stack of 'unfinished business.' Iterative traversal = you hold that stack yourself. The visited/marker flag is a DEFERRAL mechanism: 'met this node, not allowed to emit it yet.'",
+      "mnemonic": "Push in the reverse of the order you want to pop (LIFO). Marker needed only when the order makes you WAIT past children: preorder=no wait=no marker; inorder=wait past left; postorder=wait past both.",
+      "mastery": "solid",
+      "last_reviewed": "2026-08-12",
+      "review_interval": 7,
+      "aces": 2,
+      "past_mistakes": [
+        { "note": "Postorder attempt 1: inverted the marker branches -- emitted on the False (unexpanded) branch, so root printed immediately and children were never pushed; output collapsed to [root.val]. Fix: expand on 'not visited', emit on 'visited'. Attempt 2: fixed branches but left (node,True) pushed LAST -> popped first -> node before children -> got PREORDER by accident. Fix: push (node,True) FIRST so it pops last. Self-corrected both via running against a reference.", "high_confidence": false }
+      ],
+      "visual": [".dsa-tutor/visuals/iter-inorder.html"],
+      "practice_done": ["own:inorder_iter", "own:preorder_iter", "own:postorder_iter"],
+      "calibration": { "confident_right": 1, "confident_wrong": 0, "unsure_right": 0, "unsure_wrong": 0 },
+      "taught_back": null,
+      "notes": "MASTERED the unified marker (two-color) template for all three DFS orders. Independently chose the marker method for inorder (verified 500-tree fuzz), optimized it (guarded None pushes), wrote flagless direct preorder + articulated why preorder needs no deferral. Then DERIVED the full template empirically through debugging postorder: two wrong outputs ([root] then preorder) each pinpointed the fix. KEY UNIFYING INSIGHT owned: the position of the (node,True) self-push selects the order -- pushed LAST=preorder, MIDDLE=inorder, FIRST=postorder (pop order is reverse of push). Excellent debugging instinct: reads failing output to locate the bug rather than guessing."
+    },
+    {
+      "name": "Bottom-Up Aggregate",
+      "mental_model": "Postorder walk where TWO things happen per node: one value returns UP to the parent (needed for the parent's own math), a second value gets posted ASIDE to a running global best -- and the parent never sees the aside value.",
+      "mnemonic": "Return for the parent, post to the whiteboard.",
+      "mastery": "shaky",
+      "last_reviewed": "2026-08-13",
+      "review_interval": 1,
+      "aces": 2,
+      "past_mistakes": [
+        { "note": "Claimed the naive repeated-height() balance check on a fully skewed tree is O(n log n) -- confused the BALANCED-tree bound (O(log n) levels, O(n) work/level) with the skewed/degenerate case, which has O(n) levels, giving O(n^2) via the arithmetic series (N-1)+(N-2)+...+1. Corrected only after seeing concrete numbers (N=1000: n log n predicts ~10k, actual sum ~500k) -- took convincing, treat as fragile.", "high_confidence": true }
+      ],
+      "visual": [".dsa-tutor/visuals/bottom-up-aggregate.html"],
+      "practice_done": ["own:diameter_of_tree", "own:isBalanced"],
+      "calibration": { "confident_right": 2, "confident_wrong": 1, "unsure_right": 0, "unsure_wrong": 0 },
+      "taught_back": "2026-08-13",
+      "notes": "Diameter of Binary Tree (LC-543 pattern): implemented diameter_of_tree correctly on the FIRST try using a nonlocal closure variable, -1 height convention, and dia=max(dia,left+right+2). Correctly predicted UnboundLocalError would occur without 'nonlocal dia' and articulated why (assignment anywhere in a function scope marks the name local for the WHOLE function body). Also correctly reasoned diameter is a max over every node's diam_at_node, not guaranteed to pass through root. For LC-110 (Balanced Tree), INDEPENDENTLY transferred the exact same nonlocal-aside pattern from diameter to a boolean flag -- excellent unprompted transfer, single O(N) pass. BUT then confidently mis-stated the naive re-walking approach's worst-case complexity as O(n log n) instead of O(n^2) on a skewed tree -- needed convincing via concrete numbers. Core bottom-up mechanism (return up / post aside) is solid; the complexity-analysis instinct for 'repeated traversal inside recursion' needs resurfacing. TEACH-BACK (2026-08-13): first attempt only restated the generic Day-1 recursion contract; after one nudge ('what's different from count_nodes/height?') correctly named the exact distinguishing feature -- a side value updated per-node that is never propagated to the parent, i.e. running max for diameter vs. invariant-check for isBalanced."
+    },
+    {
+      "name": "Top-Down Accumulate",
+      "mental_model": "A relay baton, not a manager: each node updates the baton with its own value BEFORE handing it to a child, so the child receives already-updated state via an argument rather than asking for it. Path Sum is a hybrid -- the running target flows DOWN through arguments, but the True/False verdict still flows back UP through return + or, same as bottom-up.",
+      "mnemonic": "Sum goes down, verdict comes up.",
+      "mastery": "solid",
+      "last_reviewed": "2026-08-14",
+      "review_interval": 3,
+      "aces": 1,
+      "past_mistakes": [
+        { "note": "First has_path_sum draft pre-computed both recursive calls into `left`/`right` variables before `return left or right` -- imperative sequential statements both execute unconditionally, so it silently lost the `or` short-circuit and visited the right subtree even after the left already found the target. Fix: inline the calls directly in the return expression (`return f(...) or g(...)`) so Python's short-circuit evaluation actually skips the second call. Self-corrected on one nudge.", "high_confidence": false },
+        { "note": "LC-113 (Path Sum II): first draft appended the live `path` list reference to results instead of a copy. Self-caught and fixed to `list(path)` unprompted, before being asked. General rule (not tree-specific): any backtracking pattern mutating one shared accumulator (append pre-recursion, pop post-recursion) must snapshot a copy at the exact point of collection -- since backtracking always pops back to empty by the end, the live-reference bug's signature is ALL collected results ending up as the same final (usually empty) state, not partially-correct data.", "high_confidence": false }
+      ],
+      "visual": [".dsa-tutor/visuals/top-down-accumulate.html"],
+      "practice_done": ["own:has_path_sum", "LC-112", "LC-113"],
+      "calibration": { "confident_right": 1, "confident_wrong": 0, "unsure_right": 0, "unsure_wrong": 0 },
+      "taught_back": "2026-08-14",
+      "notes": "Pre-test (2026-08-14): both instincts correct unprompted -- (1) running sum should be passed as a DOWNWARD argument not returned up, (2) leaf detection needs an explicit both-children-None check, not just node-is-None. Worked Path Sum (LC-112 pattern, target=22) via the decrement-target trick: pass target-node.val down, leaf checks node.val==target. Traced the full left-branch success (5->4->11->2) and the `or` short-circuit that leaves the right subtree (8,13,4,1) unvisited. Correctly reasoned why the minDepth None-guard trap doesn't reopen here: False can never be mistaken for a valid path the way numeric 0 could look like a valid depth. Articulated the top-down 'interview tell' (child needs something only ancestors know -- running sum/depth/path -- pass it down) after one nudge to sharpen initial phrasing. Implemented has_path_sum correctly but first draft pre-computed both branches into variables before `or`, defeating short-circuit -- fixed on one nudge by inlining the calls. TEACH-BACK (2026-08-14): correctly explained the mechanism -- separate assignment statements execute unconditionally in imperative order, whereas inlining the call as an operand of `or` lets short-circuit evaluation skip the second call once the first is truthy. Verified by running trees.py: prints True. Next: LC-112/113 (path sum variants), then Structural Compare."
+    },
+    {
+      "name": "Structural Compare",
+      "mental_model": "same_tree walks two trees in lockstep asking IDENTITY -- does position P in tree A equal position P in tree B? -- so left always maps to left. is_mirror asks MIRROR-EQUALITY -- a real mirror swaps left and right, so t1's left must line up against t2's right, and vice versa.",
+      "mnemonic": "Same tree = same direction both sides. Mirror = swap direction each time.",
+      "mastery": "shaky",
+      "last_reviewed": "2026-08-15",
+      "review_interval": 1,
+      "aces": 0,
+      "past_mistakes": [
+        { "note": "same_tree first draft: `if root1 is None or root2 is None: return False` conflates 'both None' with 'exactly one None' using `or` -- two empty trees should be identical (True), but this returned False for that case. Also used `if root1 and root2:` (truthiness, not `is not None`) then returned only `root1.val == root2.val` with no recursion into children at all -- caught via same_tree(TreeNode(1,TreeNode(2)), TreeNode(1,TreeNode(3))) wrongly returning True. Fixed by splitting both-None (True) from exactly-one-None (False) as separate checks, then combining value equality AND both children recursively equal (existential `or` from Path Sum doesn't apply here -- Same Tree is a universal check, needs `and`).", "high_confidence": false },
+        { "note": "isSymmetric first draft called `self.isSymmetric(root.left)` and `self.isSymmetric(root.right)` as two INDEPENDENT single-argument calls, each asking 'is this one subtree symmetric with itself', then compared the resulting booleans. Caught via isSymmetric(TreeNode(1,TreeNode(2),TreeNode(3))) wrongly returning True -- a lone leaf is trivially self-symmetric regardless of its value, so root.left.val and root.right.val (2 vs 3) were NEVER compared anywhere. Needed a genuine two-argument helper (is_mirror(t1,t2)) that recurses with CROSSED pairing (t1.left vs t2.right, t1.right vs t2.left), not two separate single-argument recursions.", "high_confidence": false }
+      ],
+      "visual": [],
+      "practice_done": ["own:same_tree", "own:isSymmetric", "LC-572"],
+      "calibration": { "confident_right": 0, "confident_wrong": 0, "unsure_right": 0, "unsure_wrong": 0 },
+      "taught_back": "2026-08-15",
+      "notes": "same_tree needed two rounds of tutor correction (both-None/exactly-one-None conflation, missing recursion into children) before landing correctly -- verified via 5 cases (both None, one None, differing children, actually same, same shape diff val). isSymmetric needed a full reframe: first draft never compared root.left.val to root.right.val at all (two independent self-symmetry checks), corrected to a two-argument is_mirror with crossed pairing -- verified via 5 cases (asymmetric vals, symmetric, asymmetric shape, single node, empty tree). Learner's own is_mirror(root,root) framing (vs. the more standard is_mirror(root.left,root.right)) is a valid, slightly redundant-but-correct alternative, arrived at independently. TEACH-BACK (2026-08-15): correctly identified identity-vs-mirror-equality distinction, phrasing was a little loose ('traversal differs') but the core swap-left-right-for-mirror insight was right after one clarifying restatement. Flag same_tree/is_mirror base cases for a resurface next session given how many rounds this took. Recommend LC-100 (Same Tree) and LC-101 (Symmetric Tree) as follow-up submits, both should pass close to as-is given the verified own: versions. LC-572 (Subtree of Another Tree) solved: BFS over the main tree, isSameTree at each val-matching candidate. Had a real SyntaxError (bare `X if cond` with no else) and two truthiness-vs-is-None guard lapses (`if node.left:` / `if node:`) caught and fixed. Learner then consolidated trees.py to a single canonical TreeNode with no __bool__ override, removing the earlier dual-class-shadowing setup entirely -- this is now the fixed reference going forward, do not re-raise the __bool__/truthiness caveat unless a concrete failure actually appears against this current class."
+    }
+  ],
+  "notes": "4-day sprint starting 2026-08-11. Day 1 (foundations+traversal) DONE except Iterative Traversal (explicit stack), which becomes the Day 2 warm-up. Day 2 recursive patterns (bottom-up aggregate, top-down accumulate, structural compare, LCA). Day 3 BST. Day 4 construction/serialization + mixed drill. Learner code lives in trees/trees.py. Idiom locked: 'if node is None' (learner did a live repro). Learner writes clear ASCII-tree docstrings -- encourage. Strengths: fast transfer, precise language-semantics questions, self-derives strategies. Model: Opus 4.8 (1M). Roadmap.html was hand-enhanced by learner with done/inprog/'YOU ARE HERE' styling -- preserve that scheme (surgical edits only). Learner prefers proactive WebSearch-sourced LeetCode recommendations by pattern (see user memory).\n\nLeetCode bank by pattern (verified against leetcode.com, given 2026-08-11): Day1 traversal LC-144/94/145/104/111/226/102. Day2 bottom-up LC-543(diameter)/LC-110(balanced); top-down/compare LC-112/113(path sum)/LC-100(same)/LC-101(symmetric)/LC-236(LCA). Day3 BST LC-98(validate)/LC-230(kth)/LC-938(range sum)/LC-108(sorted->BST). Day4 LC-105/106(construct)/LC-297(serialize)/LC-199(right side view). SOLVED so far: LC-144,94,145,104,111,226,102,112,113,572.",
+  "session_recap": "Sessions 1-2 (2026-08-11 to 08-12) [DAY 1 FULLY COMPLETE]: built the whole foundation -- anatomy, TreeNode, recursion contract (manager model, two blanks, trust-the-recursion; strong teach-back), is-None idiom (learner-driven bug repro), all four traversals, level-order BFS, AND all three iterative DFS orders via the unified marker template (derived empirically by debugging postorder). Solved LC-144/94/145/104/111/226/102 (LC-111 was confident-wrong then corrected -> resurface the min-guard rule). Learner is strong: fast transfer, precise language-semantics questions, reads failing output to debug, self-derives general templates. NEXT SESSION = DAY 2, opens with: (1) 10s resurface of LC-111 min-guard + warm-up retrieval (postorder=height, level_size fence, is-None trap, marker self-push position -> order), then (2) DAY 2 core -- bottom-up aggregate (LC-543 diameter = 'return height but track a global max path'; LC-110 balanced), top-down accumulate (LC-112/113 path sum, pass value DOWN via preorder), structural compare (LC-100 same / LC-101 symmetric, two pointers in lockstep), LCA (LC-236). Current topic set to Bottom-Up Aggregate.\n\nSession 2026-08-14 (DAY 2 continued): unscheduled recall check on the if-node-is-None idiom mid-work (correct, __bool__-first/__len__-fallback precedence) -- interval advanced 3->7. Then Top-Down Accumulate: strong pre-test (both instincts right unprompted), worked Path Sum (LC-112 pattern) via decrement-target, sharpened the top-down 'interview tell' after one nudge, implemented has_path_sum correctly with one self-corrected short-circuit slip (pre-computed both branches into variables before `or`, defeating short-circuit; fixed by inlining the calls), clean teach-back of the imperative-sequential-vs-short-circuit mechanism. Marked done; current now Structural Compare. NEXT: recommend LC-112/113, then teach Structural Compare (LC-100 same / LC-101 symmetric, two pointers in lockstep) -> LCA (LC-236) to close out Day 2."
+}

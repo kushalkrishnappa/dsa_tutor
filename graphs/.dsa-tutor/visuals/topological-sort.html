@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Topological Sort — Kahn's algorithm (the wait-count crank)</title>
+<style>
+  body{margin:0;background:#15151f;color:#eee;font:15px/1.5 -apple-system,Segoe UI,Roboto,sans-serif}
+  .wrap{max-width:760px;margin:0 auto;padding:24px}
+  h1{font-size:20px;margin:0 0 4px}
+  .desc{color:#aaa;margin:0 0 16px}
+  #stage{background:#1d1d2a;border:1px solid #333;border-radius:10px}
+  svg{width:100%;height:auto;display:block}
+  .narration{min-height:52px;margin:12px 0;color:#cfcfe0}
+  .controls{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  button{background:#2b2b3a;color:#eee;border:1px solid #555;border-radius:6px;padding:6px 12px;cursor:pointer}
+  button:hover{border-color:#e0b341}
+  .counter{margin-left:auto;color:#888}
+  .quiz{margin-top:16px;background:#1d1d2a;border:1px solid #3a3a4a;border-radius:10px;padding:14px}
+  .quiz .q{font-weight:600;margin-bottom:8px}
+  .quiz button{margin:4px 6px 4px 0}
+  .reveal{margin-top:10px;color:#cfcfe0}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Topological Sort — Kahn's algorithm</h1>
+  <p class="desc">A LINEUP, not a walk. Your in-degree is your <b>wait count</b>: how many people you are still waiting on. Zero means you are free to go.</p>
+  <div id="stage"><svg id="svg" viewBox="0 0 640 420"></svg></div>
+  <div class="narration" id="narration">&mdash;</div>
+  <div class="controls">
+    <button id="prev">&#9664; Prev</button>
+    <button id="play">&#9654; Play</button>
+    <button id="step">Step &#9654;|</button>
+    <button id="reset">&#10226; Reset</button>
+    <label>Speed <input id="speed" type="range" min="300" max="1600" value="1150"></label>
+    <span class="counter" id="counter"></span>
+  </div>
+  <div class="quiz" id="quiz" hidden>
+    <div class="q" id="qtext"></div>
+    <div id="qopts"></div>
+    <div class="reveal" id="reveal" hidden></div>
+  </div>
+</div>
+<script>
+const SVG="http://www.w3.org/2000/svg";
+const svg=document.getElementById('svg');
+function el(t,a){const e=document.createElementNS(SVG,t);for(const k in a)e.setAttribute(k,a[k]);return e;}
+function txt(x,y,s,fill,size,anchor,weight){const t=el('text',{x,y,fill:fill||'#fff','font-size':size||13,'text-anchor':anchor||'middle','font-weight':weight||'400'});t.textContent=s;svg.appendChild(t);return t;}
+function clear(){while(svg.firstChild)svg.removeChild(svg.firstChild);
+  const d=el('defs',{});d.innerHTML='<marker id="ah" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="#8b8b9e"/></marker>'+
+  '<marker id="ahd" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="#e0b341"/></marker>';
+  svg.appendChild(d);}
+
+const PLACED='#3fb950', READY='#e0b341', WAIT='#2b2b3a', WAITS='#666', DEAD='#f85149';
+const R=23;
+
+// --- ACT 1: a real DAG ---
+const NA={0:{x:120,y:70},1:{x:300,y:70},2:{x:210,y:160},3:{x:120,y:250},4:{x:300,y:250},5:{x:210,y:340}};
+const EA=[[0,2],[1,2],[2,3],[2,4],[3,5],[4,5]];
+// --- ACT 2: a deadlock ---
+const NB={0:{x:210,y:80},1:{x:130,y:230},2:{x:290,y:230}};
+const EB=[[0,1],[1,2],[2,1]];
+
+function drawArrow(a,b,hot){
+  const dx=b.x-a.x, dy=b.y-a.y, L=Math.hypot(dx,dy), ux=dx/L, uy=dy/L;
+  svg.appendChild(el('line',{x1:a.x+ux*R,y1:a.y+uy*R,x2:b.x-ux*(R+9),y2:b.y-uy*(R+9),
+    stroke:hot?READY:'#7a7a8c','stroke-width':hot?2.6:1.8,'marker-end':hot?'url(#ahd)':'url(#ah)'}));
+}
+
+/* s = {N,E,counts,pool,lineup,current,placed,hot,n,stalled,title} */
+function draw(s){
+  clear();
+  txt(320,24,s.title,'#cfcfe0',13,'middle','700');
+  // edges
+  s.E.forEach(([a,b])=>drawArrow(s.N[a],s.N[b],(s.hot||[]).includes(b)&&s.current===a));
+  // nodes
+  Object.keys(s.N).forEach(k=>{
+    const id=+k, p=s.N[k], c=s.counts[id];
+    const isPlaced=s.placed.includes(id), isCur=s.current===id, isReady=!isPlaced&&c===0;
+    const isStuck=s.stalled&&!isPlaced;
+    let fill=WAIT, stroke=WAITS, sw=2;
+    if(isPlaced){fill='rgba(63,185,80,0.25)';stroke=PLACED;}
+    else if(isReady){fill='rgba(224,179,65,0.25)';stroke=READY;}
+    if(isStuck){fill='rgba(248,81,73,0.18)';stroke=DEAD;sw=3;}
+    if(isCur){fill='rgba(224,179,65,0.55)';stroke='#ffd75e';sw=4;}
+    svg.appendChild(el('circle',{cx:p.x,cy:p.y,r:R,fill,stroke,'stroke-width':sw}));
+    txt(p.x,p.y+5,String(id),'#fff',15,'middle','700');
+    // wait-count badge
+    const bx=p.x+R-2, by=p.y-R+2;
+    svg.appendChild(el('circle',{cx:bx,cy:by,r:11,fill:isPlaced?'#1d1d2a':(c===0?READY:'#3a3a4a'),
+      stroke:isPlaced?'#3a3a4a':(c===0?'#ffd75e':'#777'),'stroke-width':1.5}));
+    txt(bx,by+4,isPlaced?'—':String(c),isPlaced?'#666':(c===0?'#15151f':'#dcdce8'),11,'middle','700');
+  });
+  txt(210,395,'badge = wait count (in-degree)','#8b8b9e',10.5);
+
+  // right panel
+  const PX=410;
+  svg.appendChild(el('line',{x1:PX-14,y1:50,x2:PX-14,y2:380,stroke:'#333','stroke-width':1}));
+  txt(PX,72,'READY POOL','#e0b341',11.5,'start','700');
+  txt(PX,96,'[ '+s.pool.join(', ')+' ]',s.pool.length?'#fff':'#666',15,'start','700');
+  txt(PX,102,'wait count == 0','#8b8b9e',10,'start');
+
+  txt(PX,150,'LINEUP (output)','#3fb950',11.5,'start','700');
+  const line=s.lineup.length?s.lineup.join(' → '):'—';
+  txt(PX,176,line,s.lineup.length?'#fff':'#666',14,'start','700');
+  txt(PX,200,'placed '+s.lineup.length+' of '+s.n,'#8b8b9e',11,'start');
+
+  if(s.stalled){
+    txt(PX,254,'POOL IS DRY','#f85149',12.5,'start','700');
+    txt(PX,276,s.lineup.length+' < '+s.n,'#f85149',15,'start','700');
+    txt(PX,298,'SHORT LINEUP','#f85149',11.5,'start','700');
+    txt(PX,314,'= CYCLE','#f85149',11.5,'start','700');
+  }
+  if(s.done){
+    txt(PX,254,'POOL IS DRY','#3fb950',12.5,'start','700');
+    txt(PX,276,s.n+' == '+s.n,'#3fb950',15,'start','700');
+    txt(PX,298,'ALL PLACED','#3fb950',11.5,'start','700');
+    txt(PX,314,'= VALID DAG','#3fb950',11.5,'start','700');
+  }
+}
+
+const narration=document.getElementById('narration'),counter=document.getElementById('counter');
+const quiz=document.getElementById('quiz'),qtext=document.getElementById('qtext'),qopts=document.getElementById('qopts'),reveal=document.getElementById('reveal');
+const playBtn=document.getElementById('play'),speed=document.getElementById('speed');
+let STEPS=[],idx=0,timer=null;
+function render(){const s=STEPS[idx];s.draw();narration.textContent=s.note||'';counter.textContent=(idx+1)+' / '+STEPS.length;
+  if(s.question)showQuestion(s.question);else quiz.hidden=true;}
+function showQuestion(q){quiz.hidden=false;qtext.textContent=q.prompt;reveal.hidden=true;qopts.innerHTML='';
+  q.options.forEach((o,i)=>{const b=document.createElement('button');b.textContent=o;
+    b.onclick=()=>{reveal.hidden=false;reveal.textContent=(i===q.answer?'✓ Correct. ':'✗ Not quite. ')+q.explain;};qopts.appendChild(b);});}
+function step(){if(idx<STEPS.length-1){idx++;render();}else pause();}
+function prev(){if(idx>0){idx--;render();}}
+function pause(){clearInterval(timer);timer=null;playBtn.textContent='▶ Play';}
+function play(){if(timer){pause();return;}playBtn.textContent='⏸ Pause';timer=setInterval(()=>{if(idx>=STEPS.length-1){pause();return;}step();},+speed.value);}
+function reset(){pause();idx=0;render();}
+document.getElementById('prev').onclick=prev;
+document.getElementById('step').onclick=()=>{pause();step();};
+document.getElementById('reset').onclick=reset;
+playBtn.onclick=play;
+
+function buildSteps(){
+  const steps=[];
+  const snap=o=>{const c={...o.counts};return {...o,counts:c,pool:[...o.pool],lineup:[...o.lineup],placed:[...o.placed]};};
+
+  /* ================= ACT 1 : a DAG ================= */
+  const T1="ACT 1 — a real DAG:  0→2, 1→2, 2→3, 2→4, 3→5, 4→5";
+  let st={N:NA,E:EA,n:6,title:T1,counts:{0:0,1:0,2:2,3:1,4:1,5:2},pool:[],lineup:[],placed:[],current:null,hot:[],stalled:false,done:false};
+  steps.push({draw:(s=>()=>draw(s))(snap(st)),
+    note:"Count the arrows pointing INTO each node — that is its wait count. 0 and 1 wait on nobody. 2 waits on two people. 3 and 4 wait on one. 5 waits on two."});
+
+  st.pool=[0,1];
+  steps.push({draw:(s=>()=>draw(s))(snap(st)),
+    note:"Everyone whose wait count is already 0 goes straight into the READY POOL. Two people are free from the start — which is exactly why this graph has more than one valid answer."});
+
+  const order=[0,1,2,3,4,5];
+  const adj={0:[2],1:[2],2:[3,4],3:[5],4:[5],5:[]};
+  const notes=[
+    "Pull 0 from the pool and put it in the lineup. 0 leaves, so everyone waiting on 0 crosses a name off: node 2 drops 2 → 1.",
+    "Pull 1. Node 2 drops 1 → 0 — it is now waiting on nobody, so 2 joins the ready pool. Notice 2 became free only when its LAST blocker left.",
+    "Pull 2. Both 3 and 4 drop to 0 and join the pool together. Two people freed by one departure.",
+    "Pull 3. Node 5 drops 2 → 1. Still blocked — 4 has not left yet.",
+    "Pull 4. Node 5 drops 1 → 0 and joins the pool.",
+    "Pull 5. Pool is dry and the lineup holds all 6."
+  ];
+  order.forEach((node,k)=>{
+    // apply the whole effect FIRST, then snapshot, so the picture matches the narration
+    st.pool=st.pool.filter(x=>x!==node);
+    st.lineup.push(node); st.placed.push(node);
+    adj[node].forEach(nb=>{st.counts[nb]-=1; if(st.counts[nb]===0) st.pool.push(nb);});
+    st.current=node; st.hot=adj[node];
+    const after=snap(st);
+    steps.push({draw:()=>draw(after),note:notes[k],
+      question: k===0 ? {prompt:"Node 2's wait count just dropped from 2 to 1. Is node 2 ready to be placed?",
+        options:["Yes — one of its dependencies is satisfied","No — it is still waiting on node 1","Yes — any node touched by a placement is ready"],answer:1,
+        explain:"A node is placeable only at wait count ZERO. Partial credit does not exist: 2 needs BOTH 0 and 1 gone. It becomes free only when its last blocker leaves."} : null});
+    st.current=null; st.hot=[];
+  });
+  st.done=true;
+  steps.push({draw:(s=>()=>draw(s))(snap(st)),
+    note:"Lineup 0 → 1 → 2 → 3 → 4 → 5. Check the rule: lay them on a line and EVERY arrow points right. 6 placed of 6, so the graph is a DAG. (0,1 could have been swapped, and so could 3,4 — several valid answers.)"});
+
+  /* ================= ACT 2 : a deadlock ================= */
+  const T2="ACT 2 — a deadlock:  0→1, 1→2, 2→1";
+  let d={N:NB,E:EB,n:3,title:T2,counts:{0:0,1:2,2:1},pool:[0],lineup:[],placed:[],current:null,hot:[],stalled:false,done:false};
+  steps.push({draw:(s=>()=>draw(s))(snap(d)),
+    note:"ACT 2 — the broken graph. Wait counts: 0 waits on nobody, 1 waits on TWO (0 and 2), 2 waits on 1. The pool is NOT empty this time — 0 is free. So 'the pool starts empty' is not the real cycle test."});
+
+  d.pool=[];
+  d.lineup.push(0); d.placed.push(0); d.counts[1]=1;
+  d.current=0; d.hot=[1];
+  const dsnap=snap(d);
+  steps.push({draw:()=>draw(dsnap),
+    note:"Pull 0 into the lineup. Node 1 drops 2 → 1. Nobody hits zero.",
+    question:{prompt:"The pool is now empty, but only 1 of 3 nodes has been placed. What does that mean?",
+      options:["A bug — restart the crank from another node","The leftovers form a CYCLE: each is waiting on someone who is also waiting","Nodes 1 and 2 are simply unreachable from 0"],answer:1,
+      explain:"Deadlock. Node 1 waits on 2, node 2 waits on 1, so neither will ever reach zero and no restart can help. Both ARE reachable from 0 — reachability is not the problem, circular waiting is."}});
+  d.current=null; d.hot=[];
+
+  d.stalled=true;
+  steps.push({draw:(s=>()=>draw(s))(snap(d)),
+    note:"Stalled: pool dry, lineup holds 1 of 3. Nodes 1 and 2 are locked in a standoff — 1 waits on 2, 2 waits on 1, neither will ever hit zero. THE TEST: len(lineup) < n  →  CYCLE. One integer comparison, and Kahn's has done LC 207's job for free."});
+  return steps;
+}
+STEPS=buildSteps();render();
+</script>
+</body>
+</html>

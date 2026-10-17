@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>The Recursion Contract — height()</title>
+<style>
+  body{margin:0;background:#15151f;color:#eee;font:15px/1.5 -apple-system,Segoe UI,Roboto,sans-serif}
+  .wrap{max-width:760px;margin:0 auto;padding:24px}
+  h1{font-size:20px;margin:0 0 4px}
+  .desc{color:#aaa;margin:0 0 16px}
+  #stage{background:#1d1d2a;border:1px solid #333;border-radius:10px}
+  svg{width:100%;height:auto;display:block}
+  .narration{min-height:24px;margin:12px 0;color:#cfcfe0}
+  .controls{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  button{background:#2b2b3a;color:#eee;border:1px solid #555;border-radius:6px;padding:6px 12px;cursor:pointer}
+  button:hover{border-color:#e0b341}
+  .counter{margin-left:auto;color:#888}
+  .quiz{margin-top:16px;background:#1d1d2a;border:1px solid #3a3a4a;border-radius:10px;padding:14px}
+  .quiz .q{font-weight:600;margin-bottom:8px}
+  .quiz button{margin:4px 6px 4px 0}
+  .reveal{margin-top:10px;color:#cfcfe0}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>The Recursion Contract — height()</h1>
+  <p class="desc">Gold = the frame currently executing. Green = a node that has already returned its answer. Watch which direction the numbers travel.</p>
+  <div id="stage"><svg id="svg" viewBox="0 0 640 360"></svg></div>
+  <div class="narration" id="narration">—</div>
+  <div class="controls">
+    <button id="prev">◀ Prev</button>
+    <button id="play">▶ Play</button>
+    <button id="step">Step ▶|</button>
+    <button id="reset">⟲ Reset</button>
+    <label>Speed <input id="speed" type="range" min="300" max="1600" value="850"></label>
+    <span class="counter" id="counter"></span>
+  </div>
+  <div class="quiz" id="quiz" hidden>
+    <div class="q" id="qtext"></div>
+    <div id="qopts"></div>
+    <div class="reveal" id="reveal" hidden></div>
+  </div>
+</div>
+<script>
+/* ===== infrastructure: drawing helpers ===== */
+const SVG="http://www.w3.org/2000/svg";
+const svg=document.getElementById('svg');
+function el(t,a){const e=document.createElementNS(SVG,t);for(const k in a)e.setAttribute(k,a[k]);return e;}
+function clear(){while(svg.firstChild)svg.removeChild(svg.firstChild);}
+const COL={idle:'#2b2b3a',idleStroke:'#666',visited:'#3fb950',current:'#e0b341',curStroke:'#ffd75e',edge:'#7a7a8c',text:'#fff'};
+
+// graph: {nodes:[{id,x,y,label}], edges:[[a,b]], visited:Set, current:id}
+function drawGraph(g){
+  clear(); const pos={}; g.nodes.forEach(n=>pos[n.id]=n);
+  (g.edges||[]).forEach(([a,b])=>svg.appendChild(el('line',
+    {x1:pos[a].x,y1:pos[a].y,x2:pos[b].x,y2:pos[b].y,stroke:COL.edge,'stroke-width':2})));
+  g.nodes.forEach(n=>{
+    const v=g.visited&&g.visited.has(n.id), c=g.current===n.id;
+    svg.appendChild(el('circle',{cx:n.x,cy:n.y,r:20,
+      fill:c?COL.current:(v?COL.visited:COL.idle),
+      stroke:c?COL.curStroke:(v?COL.visited:COL.idleStroke),'stroke-width':2}));
+    const t=el('text',{x:n.x,y:n.y+5,'text-anchor':'middle',fill:COL.text,'font-size':13});
+    t.textContent=(n.label!=null?n.label:n.id); svg.appendChild(t);
+  });
+}
+
+/* ===== infrastructure: step engine + questions (do not edit) ===== */
+const narration=document.getElementById('narration'),counter=document.getElementById('counter');
+const quiz=document.getElementById('quiz'),qtext=document.getElementById('qtext'),qopts=document.getElementById('qopts'),reveal=document.getElementById('reveal');
+const playBtn=document.getElementById('play'),speed=document.getElementById('speed');
+let STEPS=[],idx=0,timer=null;
+function render(){const s=STEPS[idx];s.draw();narration.textContent=s.note||'';counter.textContent=(idx+1)+' / '+STEPS.length;
+  if(s.question)showQuestion(s.question);else quiz.hidden=true;}
+function showQuestion(q){quiz.hidden=false;qtext.textContent=q.prompt;reveal.hidden=true;qopts.innerHTML='';
+  q.options.forEach((o,i)=>{const b=document.createElement('button');b.textContent=o;
+    b.onclick=()=>{reveal.hidden=false;reveal.textContent=(i===q.answer?'✓ Correct. ':'✗ Not quite. ')+q.explain;};qopts.appendChild(b);});}
+function step(){if(idx<STEPS.length-1){idx++;render();}else pause();}
+function prev(){if(idx>0){idx--;render();}}
+function pause(){clearInterval(timer);timer=null;playBtn.textContent='▶ Play';}
+function play(){if(timer){pause();return;}playBtn.textContent='⏸ Pause';timer=setInterval(()=>{if(idx>=STEPS.length-1){pause();return;}step();},+speed.value);}
+function reset(){pause();idx=0;render();}
+document.getElementById('prev').onclick=prev;
+document.getElementById('step').onclick=()=>{pause();step();};
+document.getElementById('reset').onclick=reset;
+playBtn.onclick=play;
+
+/* ===== EDIT BELOW: define the lesson ===== */
+function buildSteps(){
+  const P={A:[320,45],B:[180,130],C:[460,130],D:[110,215],E:[250,215],F:[390,215],G:[530,215],H:[565,300]};
+  const EDGES=[['A','B'],['A','C'],['B','D'],['B','E'],['C','F'],['C','G'],['G','H']];
+  function nodesFor(res){
+    return Object.keys(P).map(function(id){
+      const h=res[id];
+      return {id:id,x:P[id][0],y:P[id][1],label:(h===undefined?id:id+'='+h)};
+    });
+  }
+  const qB={prompt:"Both of B's children have returned 0. What does height(B) return?",
+    options:["0","1","2"],answer:1,
+    explain:"height = 1 + max(children). Both kids are 0, so B is 1 + 0 = 1. That +1 is the single edge from B down to its taller child."};
+  const qC={prompt:"C's children returned 0 (from F) and 1 (from G). What does height(C) return?",
+    options:["1","2","3"],answer:1,
+    explain:"1 + max(0,1) = 2. MAX, not sum — height is the longest single path downward, not the total size of the subtree. Summing would give you node counts instead."};
+
+  const ev=[
+    ['A',[],      "height(A) is called. A cannot answer yet — it has no idea how tall its subtrees are.",null],
+    ['B',[],      "Dive left: height(B). Still no answer. Notice that NOTHING is computed on the way down.",null],
+    ['D',[],      "Dive left again: height(D). D's two children are both None, and None returns -1.",null],
+    ['D',['D:0'], "D returns 1 + max(-1,-1) = 0. The first real answer — and it came from the BOTTOM.",null],
+    ['E',['E:0'], "Back to B, now go right: height(E) also returns 0. B finally has both numbers it was waiting for.",null],
+    ['B',[],      "B can now answer. Predict it before I show you.",qB],
+    ['B',['B:1'], "B returns 1 + max(0,0) = 1. B's frame is finished and disappears off the call stack.",null],
+    ['C',[],      "Back up to A, dive right: height(C) is called.",null],
+    ['F',['F:0'], "height(F) — a leaf, so it returns 0.",null],
+    ['G',[],      "height(G) is called. Look carefully: G has only ONE child.",null],
+    ['H',['H:0'], "height(H) — another leaf, returns 0.",null],
+    ['G',['G:1'], "G returns 1 + max(0, -1) = 1. The MISSING child contributed -1 — which is exactly why -1 is the right base case.",null],
+    ['C',[],      "C now holds both numbers: 0 from F, 1 from G. Predict C.",qC],
+    ['C',['C:2'], "C returns 1 + max(0,1) = 2.",null],
+    [null,['A:3'],"A returns 1 + max(1,2) = 3. Every answer flowed UPWARD. Not one value was computed on the way down.",null]
+  ];
+
+  const res={},steps=[];
+  ev.forEach(function(e){
+    e[1].forEach(function(kv){const p=kv.split(':');res[p[0]]=+p[1];});
+    const snap=JSON.parse(JSON.stringify(res));
+    const cur=e[0];
+    steps.push({
+      draw:function(){drawGraph({nodes:nodesFor(snap),edges:EDGES,visited:new Set(Object.keys(snap)),current:cur});},
+      note:e[2],question:e[3]});
+  });
+  return steps;
+}
+STEPS=buildSteps();render();
+</script>
+</body>
+</html>

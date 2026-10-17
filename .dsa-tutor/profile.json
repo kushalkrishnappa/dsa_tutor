@@ -1,0 +1,28 @@
+{
+  "learner_level": "intermediate",
+  "last_session_date": "2026-10-06",
+  "streak": 7,
+  "areas": [
+    {
+      "folder": "graphs",
+      "last_session_date": "2026-10-06"
+    },
+    {
+      "folder": "trees",
+      "last_session_date": "2026-08-15"
+    },
+    {
+      "folder": "sliding-window",
+      "last_session_date": "2026-08-17"
+    },
+    {
+      "folder": "tries",
+      "last_session_date": "2026-09-20"
+    },
+    {
+      "folder": "binary-search",
+      "last_session_date": "2026-10-01"
+    }
+  ],
+  "notes": "Prefers Python."
+}

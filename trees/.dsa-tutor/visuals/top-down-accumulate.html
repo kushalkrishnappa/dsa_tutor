@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Top-Down Accumulate — Path Sum</title>
+<style>
+  body{margin:0;background:#15151f;color:#eee;font:15px/1.5 -apple-system,Segoe UI,Roboto,sans-serif}
+  .wrap{max-width:760px;margin:0 auto;padding:24px}
+  h1{font-size:20px;margin:0 0 4px}
+  .desc{color:#aaa;margin:0 0 16px}
+  #stage{background:#1d1d2a;border:1px solid #333;border-radius:10px}
+  svg{width:100%;height:auto;display:block}
+  .narration{min-height:24px;margin:12px 0;color:#cfcfe0}
+  .controls{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  button{background:#2b2b3a;color:#eee;border:1px solid #555;border-radius:6px;padding:6px 12px;cursor:pointer}
+  button:hover{border-color:#e0b341}
+  .counter{margin-left:auto;color:#888}
+  .quiz{margin-top:16px;background:#1d1d2a;border:1px solid #3a3a4a;border-radius:10px;padding:14px}
+  .quiz .q{font-weight:600;margin-bottom:8px}
+  .quiz button{margin:4px 6px 4px 0}
+  .reveal{margin-top:10px;color:#cfcfe0}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Top-Down Accumulate — Path Sum</h1>
+  <p class="desc">The running target flows DOWN through function arguments (decremented at each node). The yes/no verdict flows back UP through return values, combined with <code>or</code>. target = 22.</p>
+  <div id="stage"><svg id="svg" viewBox="0 0 640 360"></svg></div>
+  <div class="narration" id="narration">—</div>
+  <div class="controls">
+    <button id="prev">◀ Prev</button>
+    <button id="play">▶ Play</button>
+    <button id="step">Step ▶|</button>
+    <button id="reset">⟲ Reset</button>
+    <label>Speed <input id="speed" type="range" min="300" max="1600" value="850"></label>
+    <span class="counter" id="counter"></span>
+  </div>
+  <div class="quiz" id="quiz" hidden>
+    <div class="q" id="qtext"></div>
+    <div id="qopts"></div>
+    <div class="reveal" id="reveal" hidden></div>
+  </div>
+</div>
+<script>
+/* ===== infrastructure: drawing helpers ===== */
+const SVG="http://www.w3.org/2000/svg";
+const svg=document.getElementById('svg');
+function el(t,a){const e=document.createElementNS(SVG,t);for(const k in a)e.setAttribute(k,a[k]);return e;}
+function clear(){while(svg.firstChild)svg.removeChild(svg.firstChild);}
+const COL={idle:'#2b2b3a',idleStroke:'#666',visited:'#3fb950',current:'#e0b341',curStroke:'#ffd75e',edge:'#7a7a8c',text:'#fff'};
+
+function drawGraph(g){
+  clear(); const pos={}; g.nodes.forEach(n=>pos[n.id]=n);
+  (g.edges||[]).forEach(([a,b])=>svg.appendChild(el('line',
+    {x1:pos[a].x,y1:pos[a].y,x2:pos[b].x,y2:pos[b].y,stroke:COL.edge,'stroke-width':2})));
+  g.nodes.forEach(n=>{
+    const v=g.visited&&g.visited.has(n.id), c=g.current===n.id;
+    svg.appendChild(el('circle',{cx:n.x,cy:n.y,r:24,
+      fill:c?COL.current:(v?COL.visited:COL.idle),
+      stroke:c?COL.curStroke:(v?COL.visited:COL.idleStroke),'stroke-width':2}));
+    const t=el('text',{x:n.x,y:n.y+5,'text-anchor':'middle',fill:COL.text,'font-size':12});
+    t.textContent=(n.label!=null?n.label:n.id); svg.appendChild(t);
+  });
+}
+
+function layoutTree(root){
+  const nodes=[],edges=[]; let leaf=0; const dy=80,x0=60,y0=40;
+  (function rec(n,depth){
+    let mid; if(n.children&&n.children.length){const ks=n.children.map(c=>rec(c,depth+1));mid=(ks[0]+ks[ks.length-1])/2;}
+    else mid=leaf++;
+    nodes.push({id:n.id,x:x0+mid*80,y:y0+depth*dy,label:(n.label!=null?n.label:n.id)});
+    (n.children||[]).forEach(c=>edges.push([n.id,c.id])); return mid;
+  })(root,0);
+  return {nodes,edges};
+}
+function drawTree(t){const {nodes,edges}=layoutTree(t.root);drawGraph({nodes,edges,visited:t.visited,current:t.current});}
+
+/* ===== infrastructure: step engine + questions (do not edit) ===== */
+const narration=document.getElementById('narration'),counter=document.getElementById('counter');
+const quiz=document.getElementById('quiz'),qtext=document.getElementById('qtext'),qopts=document.getElementById('qopts'),reveal=document.getElementById('reveal');
+const playBtn=document.getElementById('play'),speed=document.getElementById('speed');
+let STEPS=[],idx=0,timer=null;
+function render(){const s=STEPS[idx];s.draw();narration.textContent=s.note||'';counter.textContent=(idx+1)+' / '+STEPS.length;
+  if(s.question)showQuestion(s.question);else quiz.hidden=true;}
+function showQuestion(q){quiz.hidden=false;qtext.textContent=q.prompt;reveal.hidden=true;qopts.innerHTML='';
+  q.options.forEach((o,i)=>{const b=document.createElement('button');b.textContent=o;
+    b.onclick=()=>{reveal.hidden=false;reveal.textContent=(i===q.answer?'✓ Correct. ':'✗ Not quite. ')+q.explain;};qopts.appendChild(b);});}
+function step(){if(idx<STEPS.length-1){idx++;render();}else pause();}
+function prev(){if(idx>0){idx--;render();}}
+function pause(){clearInterval(timer);timer=null;playBtn.textContent='▶ Play';}
+function play(){if(timer){pause();return;}playBtn.textContent='⏸ Pause';timer=setInterval(()=>{if(idx>=STEPS.length-1){pause();return;}step();},+speed.value);}
+function reset(){pause();idx=0;render();}
+document.getElementById('prev').onclick=prev;
+document.getElementById('step').onclick=()=>{pause();step();};
+document.getElementById('reset').onclick=reset;
+playBtn.onclick=play;
+
+/* ===== EDIT BELOW: define the lesson ===== */
+function buildSteps(){
+  const TREE={id:'5',val:5,children:[
+    {id:'4',val:4,children:[
+      {id:'11',val:11,children:[
+        {id:'7',val:7,children:[]},
+        {id:'2',val:2,children:[]}
+      ]}
+    ]},
+    {id:'8',val:8,children:[
+      {id:'13',val:13,children:[]},
+      {id:'4b',val:4,children:[
+        {id:'1',val:1,children:[]}
+      ]}
+    ]}
+  ]};
+  function labeledRoot(overrides){
+    function rec(n){return {id:n.id,label:(overrides[n.id]!=null?overrides[n.id]:String(n.val)),children:(n.children||[]).map(rec)};}
+    return rec(TREE);
+  }
+  const steps=[];
+  steps.push({draw:()=>drawTree({root:labeledRoot({}),visited:new Set(),current:null}),
+    note:"Path Sum, target=22. Watch 'remaining' get carried DOWN as an argument -- decremented by node.val at each step."});
+  steps.push({draw:()=>drawTree({root:labeledRoot({'5':'5 →17'}),visited:new Set(),current:'5'}),
+    note:"At root 5: not a leaf. remaining passed to children = 22 - 5 = 17."});
+  steps.push({draw:()=>drawTree({root:labeledRoot({'5':'5 →17','4':'4 →13'}),visited:new Set(['5']),current:'4'}),
+    note:"At 4: not a leaf. remaining for its child = 17 - 4 = 13."});
+  steps.push({draw:()=>drawTree({root:labeledRoot({'5':'5 →17','4':'4 →13','11':'11 →2'}),visited:new Set(['5','4']),current:'11'}),
+    note:"At 11: not a leaf. remaining for its two children = 13 - 11 = 2. Both 7 and 2 get called with remaining=2.",
+    question:{prompt:"7 and 2 are both leaves and both get remaining=2. What decides whether each one returns True?",
+      options:["Whether node.val == remaining (the leaf check)","Whether node.val < remaining","Whether the node has any children"],
+      answer:0,
+      explain:"At a leaf there's no more tree left to distribute value across -- the whole remaining path-sum has to be accounted for by this one node's val."}});
+  steps.push({draw:()=>drawTree({root:labeledRoot({'5':'5 →17','4':'4 →13','11':'11 →2','7':'7≟2 ✗'}),visited:new Set(['5','4','11']),current:'7'}),
+    note:"7 is a leaf. Is 7 == 2? No. This branch returns False."});
+  steps.push({draw:()=>drawTree({root:labeledRoot({'5':'5 →17','4':'4 →13','11':'11 →2','7':'7≟2 ✗','2':'2≟2 ✓'}),visited:new Set(['5','4','11','7']),current:'2'}),
+    note:"2 is a leaf. Is 2 == 2? Yes! This branch returns True."});
+  steps.push({draw:()=>drawTree({root:labeledRoot({'5':'5 ✓','4':'4 ✓','11':'11 ✓','7':'7≟2 ✗','2':'2≟2 ✓'}),visited:new Set(['5','4','11','7','2']),current:null}),
+    note:"11 = (False or True) = True. That True bubbles straight up through 4 and 5 via `or` -- no extra logic needed at internal nodes."});
+  steps.push({draw:()=>drawTree({root:labeledRoot({'5':'5 ✓','4':'4 ✓','11':'11 ✓','7':'7≟2 ✗','2':'2≟2 ✓'}),visited:new Set(['5','4','11','7','2']),current:null}),
+    note:"Because `or` short-circuits, the entire right subtree (8, 13, 4, 1) is never explored once the left side returns True. They stay untouched (grey) forever.",
+    question:{prompt:"A None child returns False here (the base case). Why doesn't this reopen the minDepth trap, where a None child's 0 masqueraded as a valid leaf?",
+      options:["False can never accidentally equal a real target the way a numeric 0 could look like a valid depth","Path Sum never has a node with only one child","False is actually truthy in Python"],
+      answer:0,
+      explain:"minDepth's bug worked because 0 is also a value a REAL node could plausibly return. False is never mistaken for a successful path -- there's no ambiguity to guard against, so no extra absent-child check is needed here."}});
+  return steps;
+}
+STEPS=buildSteps();render();
+</script>
+</body>
+</html>

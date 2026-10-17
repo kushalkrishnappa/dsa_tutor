@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Window Invariant — Longest Substring Without Repeating Characters</title>
+<style>
+  body{margin:0;background:#15151f;color:#eee;font:15px/1.5 -apple-system,Segoe UI,Roboto,sans-serif}
+  .wrap{max-width:760px;margin:0 auto;padding:24px}
+  h1{font-size:20px;margin:0 0 4px}
+  .desc{color:#aaa;margin:0 0 16px}
+  #stage{background:#1d1d2a;border:1px solid #333;border-radius:10px}
+  svg{width:100%;height:auto;display:block}
+  .narration{min-height:24px;margin:12px 0;color:#cfcfe0}
+  .controls{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  button{background:#2b2b3a;color:#eee;border:1px solid #555;border-radius:6px;padding:6px 12px;cursor:pointer}
+  button:hover{border-color:#e0b341}
+  .counter{margin-left:auto;color:#888}
+  .quiz{margin-top:16px;background:#1d1d2a;border:1px solid #3a3a4a;border-radius:10px;padding:14px}
+  .quiz .q{font-weight:600;margin-bottom:8px}
+  .quiz button{margin:4px 6px 4px 0}
+  .reveal{margin-top:10px;color:#cfcfe0}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Window Invariant: Longest Substring Without Repeating Characters</h1>
+  <p class="desc">String = "abcabcbb". Watch L (left) and R (right) — R always steps forward one at a time; L only moves when the window breaks its rule (a repeated character).</p>
+  <div id="stage"><svg id="svg" viewBox="0 0 640 260"></svg></div>
+  <div class="narration" id="narration">—</div>
+  <div class="controls">
+    <button id="prev">◀ Prev</button>
+    <button id="play">▶ Play</button>
+    <button id="step">Step ▶|</button>
+    <button id="reset">⟲ Reset</button>
+    <label>Speed <input id="speed" type="range" min="300" max="1600" value="950"></label>
+    <span class="counter" id="counter"></span>
+  </div>
+  <div class="quiz" id="quiz" hidden>
+    <div class="q" id="qtext"></div>
+    <div id="qopts"></div>
+    <div class="reveal" id="reveal" hidden></div>
+  </div>
+</div>
+<script>
+const SVG="http://www.w3.org/2000/svg";
+const svg=document.getElementById('svg');
+function el(t,a){const e=document.createElementNS(SVG,t);for(const k in a)e.setAttribute(k,a[k]);return e;}
+function clear(){while(svg.firstChild)svg.removeChild(svg.firstChild);}
+const COL={idle:'#2b2b3a',idleStroke:'#666',visited:'#3fb950',current:'#e0b341',curStroke:'#ffd75e',edge:'#7a7a8c',text:'#fff'};
+
+function drawArray(a){
+  clear(); const horiz=(a.orient||'h')==='h', bw=46,bh=40,gap=6,x0=40,y0=90;
+  a.values.forEach((v,i)=>{
+    const x=horiz?x0+i*(bw+gap):x0, y=horiz?y0:y0+i*(bh+gap);
+    const hi=a.highlight&&a.highlight.has(i);
+    svg.appendChild(el('rect',{x,y,width:bw,height:bh,rx:6,
+      fill:hi?COL.current:COL.idle,stroke:hi?COL.curStroke:COL.idleStroke,'stroke-width':2}));
+    const t=el('text',{x:x+bw/2,y:y+bh/2+5,'text-anchor':'middle',fill:COL.text,'font-size':16});t.textContent=v;svg.appendChild(t);
+    const ix=el('text',{x:x+bw/2,y:y-8,'text-anchor':'middle',fill:'#888','font-size':11});ix.textContent=i;svg.appendChild(ix);
+  });
+  for(const name in (a.pointers||{})){const i=a.pointers[name];
+    const x=horiz?x0+i*(bw+gap)+bw/2:x0-16, y=horiz?y0-26:y0+i*(bh+gap)+bh/2;
+    const p=el('text',{x,y,'text-anchor':'middle',fill:COL.current,'font-size':13,'font-weight':'700'});p.textContent=name;svg.appendChild(p);}
+  const info=el('text',{x:x0,y:y0+bh+40,'font-size':13,fill:'#9fd3a0'});
+  info.textContent='maxLen so far: '+a.maxLen; svg.appendChild(info);
+}
+
+const narration=document.getElementById('narration'),counter=document.getElementById('counter');
+const quiz=document.getElementById('quiz'),qtext=document.getElementById('qtext'),qopts=document.getElementById('qopts'),reveal=document.getElementById('reveal');
+const playBtn=document.getElementById('play'),speed=document.getElementById('speed');
+let STEPS=[],idx=0,timer=null;
+function render(){const s=STEPS[idx];s.draw();narration.textContent=s.note||'';counter.textContent=(idx+1)+' / '+STEPS.length;
+  if(s.question)showQuestion(s.question);else quiz.hidden=true;}
+function showQuestion(q){quiz.hidden=false;qtext.textContent=q.prompt;reveal.hidden=true;qopts.innerHTML='';
+  q.options.forEach((o,i)=>{const b=document.createElement('button');b.textContent=o;
+    b.onclick=()=>{reveal.hidden=false;reveal.textContent=(i===q.answer?'✓ Correct. ':'✗ Not quite. ')+q.explain;};qopts.appendChild(b);});}
+function step(){if(idx<STEPS.length-1){idx++;render();}else pause();}
+function prev(){if(idx>0){idx--;render();}}
+function pause(){clearInterval(timer);timer=null;playBtn.textContent='▶ Play';}
+function play(){if(timer){pause();return;}playBtn.textContent='⏸ Pause';timer=setInterval(()=>{if(idx>=STEPS.length-1){pause();return;}step();},+speed.value);}
+function reset(){pause();idx=0;render();}
+document.getElementById('prev').onclick=prev;
+document.getElementById('step').onclick=()=>{pause();step();};
+document.getElementById('reset').onclick=reset;
+playBtn.onclick=play;
+
+function buildSteps(){
+  const vals=['a','b','c','a','b','c','b','b'];
+  const win=(L,R)=>{const s=new Set();for(let i=L;i<=R;i++)s.add(i);return s;};
+  const frames=[
+    {L:0,R:0,maxLen:1,note:"Expand: r=0 ('a'). Window=[0,0]={a}. maxLen=1."},
+    {L:0,R:1,maxLen:2,note:"Expand: r=1 ('b'). Window=[0,1]={a,b}. maxLen=2."},
+    {L:0,R:2,maxLen:3,note:"Expand: r=2 ('c'). Window=[0,2]={a,b,c}. maxLen=3. No duplicate yet, so the window only ever grows."},
+    {L:0,R:3,maxLen:3,note:"Expand: r=3 ('a') — but index 0 is already 'a'! Window is temporarily invalid: {a,b,c,a}.",
+      question:{prompt:"The window just became invalid. What does sliding window do next?",
+        options:["Reject 'a' and skip to r=4","Shrink from the left, one step at a time, until the duplicate is gone","Throw away the whole window and restart at r=3"],
+        answer:1,explain:"Sliding window never skips or restarts from scratch — it shrinks the left edge one step at a time until the violation clears, reusing all the work already done."}},
+    {L:1,R:3,maxLen:3,note:"Shrink: drop index 0. Window=[1,3]={b,c,a}. Valid again, size 3. maxLen stays 3."},
+    {L:3,R:5,maxLen:3,note:"Fast-forward: r=4 ('b') duplicates index 1 → shrink 1 step. r=5 ('c') duplicates index 2 → shrink 1 step. Both duplicates sat right at the left edge, so each shrink took exactly one step. Window now=[3,5]={a,b,c}, size 3 — maxLen still 3."},
+    {L:3,R:6,maxLen:3,note:"Expand: r=6 ('b') — but this duplicate is at index 4, not at the left edge! Window temporarily invalid: {a,b,c,b}.",
+      question:{prompt:"The duplicate 'b' is 2 slots in from the left edge (index 4), not at index 3. How many steps will the shrink take this time?",
+        options:["Still exactly 1 step, shrinking always clears it immediately","Exactly 2 steps — one per position between the left edge and the duplicate","It's undefined; sliding window can't handle this case"],
+        answer:1,explain:"Shrinking is always one step at a time, but the NUMBER of steps varies — here it takes 2 steps to walk L past the duplicate. Each individual step is still O(1); across the whole string the total shrinking is amortized O(n), never a jump."}},
+    {L:4,R:6,maxLen:3,note:"Shrink step 1 of 2: drop index 3 ('a'). Window=[4,6]={b,c,b}. Still holds the duplicate 'b' — not clear yet, keep shrinking."},
+    {L:5,R:6,maxLen:3,note:"Shrink step 2 of 2: drop index 4 ('b'). Window=[5,6]={c,b}. Valid now, size 2. maxLen stays 3 — this window never catches the record."},
+    {L:5,R:7,maxLen:3,note:"Expand: r=7 ('b') — duplicates index 6. Window temporarily invalid: {c,b,b}."},
+    {L:7,R:7,maxLen:3,note:"Shrink twice (drop 'c', drop 'b'): Window=[7,7]={b}. String exhausted."},
+    {L:7,R:7,maxLen:3,note:"Done. Longest substring without repeating characters = 3 (\"abc\") — found at step 3, never beaten again. One left-to-right pass, O(n) total, no substring ever re-scanned from scratch."}
+  ];
+  return frames.map(f=>({draw:()=>drawArray({values:vals,pointers:{L:f.L,R:f.R},highlight:win(f.L,f.R),maxLen:f.maxLen}),note:f.note,question:f.question}));
+}
+STEPS=buildSteps();render();
+</script>
+</body>
+</html>

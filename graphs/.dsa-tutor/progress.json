@@ -1,0 +1,438 @@
+{
+  "area": "graphs",
+  "last_session_date": "2026-10-06",
+  "roadmap": ".dsa-tutor/roadmap.html",
+  "current": "Minimum Spanning Tree",
+  "topics": [
+    {
+      "name": "Graph Terminology",
+      "status": "done"
+    },
+    {
+      "name": "Graph Representations",
+      "status": "done"
+    },
+    {
+      "name": "Breadth-First Search",
+      "status": "done"
+    },
+    {
+      "name": "Depth-First Search",
+      "status": "done"
+    },
+    {
+      "name": "Traversal Patterns (trees/graphs/grids)",
+      "status": "done"
+    },
+    {
+      "name": "Connected Components",
+      "status": "done"
+    },
+    {
+      "name": "Cycle Detection",
+      "status": "done"
+    },
+    {
+      "name": "Topological Sort",
+      "status": "in-progress"
+    },
+    {
+      "name": "Bipartite Check",
+      "status": "not-started"
+    },
+    {
+      "name": "Unweighted Shortest Path",
+      "status": "not-started"
+    },
+    {
+      "name": "Dijkstra's Algorithm",
+      "status": "not-started"
+    },
+    {
+      "name": "Bellman-Ford",
+      "status": "not-started"
+    },
+    {
+      "name": "Union-Find (DSU)",
+      "status": "in-progress"
+    },
+    {
+      "name": "Minimum Spanning Tree",
+      "status": "in-progress"
+    },
+    {
+      "name": "Floyd-Warshall",
+      "status": "not-started"
+    }
+  ],
+  "concepts": [
+    {
+      "name": "Graph Terminology",
+      "mental_model": "Google Maps road network: intersections = vertices, roads = edges; one-way streets = directed, distances = weights.",
+      "mnemonic": "Mark before you walk - a visited set is the seatbelt that stops cycles from looping you forever.",
+      "mastery": "solid",
+      "last_reviewed": "2026-07-04",
+      "review_interval": 7,
+      "aces": 2,
+      "past_mistakes": [],
+      "visual": [
+        ".dsa-tutor/visuals/terminology-representations-solutions.html"
+      ],
+      "practice_done": [],
+      "calibration": {
+        "confident_right": 0,
+        "confident_wrong": 0,
+        "unsure_right": 0,
+        "unsure_wrong": 0
+      },
+      "taught_back": null
+    },
+    {
+      "name": "Graph Representations",
+      "mental_model": "Adjacency list = your phone contacts (only the people you actually know). Adjacency matrix = a V x V seating grid with a cell reserved for every possible pair.",
+      "mnemonic": "List = Lean (sparse), Matrix = Massive (dense). Matrix size = V^2 always; edges never shrink it. | THE CURRENCY: List = pay per FRIEND (degree). Matrix = pay per SEAT in the row (V). Matrix's one superpower: edge u-v? in O(1).",
+      "mastery": "shaky",
+      "last_reviewed": "2026-07-17",
+      "review_interval": 1,
+      "aces": 3,
+      "past_mistakes": [
+        {
+          "note": "Sized the adjacency matrix by edge count (~30M) instead of V^2. A matrix is ALWAYS V^2 regardless of edges: 10M nodes = 100 trillion cells, even with zero edges. Also wrongly called matrix neighbor-traversal 'constant' - iterating one node's neighbors in a matrix is O(V), worse than the list's O(degree). [Re-tested 2026-07-04 quiz: PASSED - said V^2 immediately.]",
+          "high_confidence": false
+        },
+        {
+          "note": "Python dict key-type bug: pre-initialized isolated nodes with str(i) keys but edges used int labels, so adj[1] and adj['1'] became separate keys (1 == '1' is False). Got conceptual isolated-node fix right but mismatched key types. Remember: to a dict, 1 and '1' are different keys.",
+          "high_confidence": false
+        },
+        {
+          "note": "2026-07-17 quiz: the OLD matrix mistake wearing the other shoe - priced adjacency-LIST operations in V (said neighbor-iteration and edge-query cost O(99999)) when the list's currency is DEGREE: both are O(degree(u)), ~4 avg in a V=100k/E=200k graph. The list exists precisely to avoid the matrix's O(V) row-scan. Corrected via phone-contacts anchor + 'pay per friend vs pay per seat'. Retested with celebrity node c (degree 99,999) vs normal node (degree 4): PASSED - correctly priced both in degree, seeing that degree can coincidentally equal V-1. Re-pull: ask costs of list vs matrix for (a) iterate neighbors (b) edge u-v query.",
+          "high_confidence": false
+        }
+      ],
+      "visual": [
+        ".dsa-tutor/visuals/terminology-representations-solutions.html"
+      ],
+      "practice_done": [
+        "self-implemented build_adjacency_list in graphs/graphs.py (undirected, defaultdict, isolated-node init)"
+      ],
+      "calibration": {
+        "confident_right": 0,
+        "confident_wrong": 0,
+        "unsure_right": 0,
+        "unsure_wrong": 0
+      },
+      "taught_back": null
+    },
+    {
+      "name": "Breadth-First Search",
+      "mental_model": "A wave/ripple spreading from a stone dropped in water: reaches everything 1 hop away, THEN everything 2 hops away, never skipping ahead. WHY first-arrival = shortest: the queue is SORTED by distance - it only ever holds ring d and ring d+1, in that order (monotone-queue invariant). Ring-(d+1) nodes are only let into line by ring-d nodes, so nothing farther can jump the line.",
+      "mnemonic": "Breadth = Queue, fan out in rings (FIFO). Depth = Stack, dive down (LIFO). Swap them and BFS becomes DFS. And: mark visited on ENQUEUE, not dequeue. | FIFO keeps the wave SORTED - the queue never goes backwards in distance.",
+      "mastery": "solid",
+      "last_reviewed": "2026-07-29",
+      "review_interval": 16,
+      "aces": 5,
+      "past_mistakes": [
+        {
+          "note": "Said to mark a node visited when DEQUEUED. Wrong: that lets the same node be enqueued multiple times (diamond graph A-B,A-C,B-D,C-D enqueues D twice). Correct idiom: mark visited the instant you ENQUEUE, so each node enters the queue exactly once. [Re-tested 2026-07-04 quiz: PASSED with nuance - led with ENQUEUE and correctly noted dequeue works too with a skip-guard but floods the queue; transferred the DFS push-vs-pop insight to BFS.]",
+          "high_confidence": false
+        },
+        {
+          "note": "Watch transfer: used distances[node] + 6 (HackerRank's per-edge weight). Generic BFS hop-distance is + 1. Same algorithm, different per-edge cost.",
+          "high_confidence": false
+        },
+        {
+          "note": "2026-07-17 quiz depth gap (not a misconception): asked WHY BFS first-arrival is optimal, answered 'FIFO' by restating what a queue is, but could not articulate the monotone-queue invariant (queue holds only rings d and d+1, sorted; ring-d+1 joins behind remaining ring-d). Taught the invariant + 'nothing farther can jump the line'. Re-pull: ask them to STATE the invariant and why a 5-hop label can't dequeue before a 3-hop one.",
+          "high_confidence": false
+        },
+        {
+          "note": "2026-07-29 quiz Q4 - the 07-17 depth gap, RESOLVED. First answer was still CIRCULAR ('when we reach the target it is the first node seen, hence shortest' = restating the conclusion as its own reason) - named as circular, then the invariant was taught explicitly with a queue-snapshot table on A-B,A-C,B-D,C-D,D-E showing rings present at each pop ({0},{1},{1,2},{2},{3}) and that E(3) could not ENTER until D(2) was dequeued. Confirm question ('can the queue ever hold a 2-hop and a 4-hop node at once?') PASSED: said no and justified via the invariant (at most rings d and d+1; a node only enqueues when its predecessor is processed). Chain to keep: for a 4 to be IN the queue a 3 must already be OUT; for a 3 to be out all 2s must be gone. Depth gap CLOSED - interval 7 -> 16.",
+          "high_confidence": false
+        }
+      ],
+      "visual": [
+        ".dsa-tutor/visuals/bfs.html",
+        ".dsa-tutor/visuals/traversals-bfs-dfs-solutions.html"
+      ],
+      "practice_done": [
+        "self-implemented bfs(graph,start) in graphs/graphs.py - mark-on-enqueue, deque, verified output [2,1,3]",
+        "HackerRank 'BFS: Shortest Reach in a Graph' - solved, all tests passed (Graph class, distances[]= -1 sentinel, +6 per-edge)"
+      ],
+      "calibration": {
+        "confident_right": 0,
+        "confident_wrong": 0,
+        "unsure_right": 0,
+        "unsure_wrong": 0
+      },
+      "taught_back": null
+    },
+    {
+      "name": "Depth-First Search",
+      "mental_model": "Maze walk: take the first unexplored corridor, go deep until a dead end, then backtrack to the most recent junction with an unexplored corridor. (vs BFS's spreading wave.)",
+      "mnemonic": "Depth = Stack (dive down, LIFO). In recursion the CALL STACK is your stack. At a dead end, back up to the last node with an unexplored neighbor. And: mark BEFORE you recurse, never after.",
+      "mastery": "solid",
+      "last_reviewed": "2026-07-04",
+      "review_interval": 16,
+      "aces": 4,
+      "past_mistakes": [
+        {
+          "note": "Used `global dfs_order, visited` in recursive DFS - unnecessary. A nested helper only mutates (append/add), never rebinds, so the closure shares them without global/nonlocal. global just leaks module names (smell).",
+          "high_confidence": false
+        },
+        {
+          "note": "Iterative-DFS nuance to retain: LIFO flips neighbor order, so an explicit-stack DFS dives into the LAST-listed neighbor first; push reversed() to mirror recursion. Two valid marking strategies: mark-on-PUSH (each node once, no stack dups - what they used) vs mark-on-POP + skip-if-visited guard (mirrors recursion, allows dups). Recursive DFS dies past Python's ~1000 recursion limit; iterative does not.",
+          "high_confidence": false
+        },
+        {
+          "note": "LeetCode 733 first attempt: marked the cell AFTER the recursive call (dfs(nr,nc) then image[nr][nc]=2) -> infinite recursion, proven with [[1,1,1]] RecursionError. Rule: mark BEFORE recursing (mirror of mark-on-push). Fixed it.",
+          "high_confidence": false
+        }
+      ],
+      "visual": [
+        ".dsa-tutor/visuals/dfs.html",
+        ".dsa-tutor/visuals/traversals-bfs-dfs-solutions.html"
+      ],
+      "practice_done": [
+        "self-implemented recursive dfs(graph,start) in graphs/graphs.py - correct, verified [2,1,3] then [1,2,5,6,3,4]",
+        "self-implemented dfs_iterative(graph,start) - explicit stack, mark-on-push, correct, verified [1,4,3,6,5,2]",
+        "self-implemented flood_fill_recursive + flood_fill_iterative (grid DFS) in graphs/graphs.py - verified against 5x6 multi-island grid, output matched exactly. Initially predicted mark-on-PUSH but wrote mark-on-POP + guard (line 87 `if grid[r][c]==1`). On re-test correctly explained that duplicates CAN sit on the stack under mark-on-pop and that line 87 dedupes the re-popped cell. Push-vs-pop distinction now OWNED. Then re-implemented flood_fill_iterative as mark-on-PUSH (correctly marks the start before the loop + marks each neighbor at push time; no stack dups; verified output still matches). WATCH: left a vacuous pop-guard `if grid[r][c] == 0` that is always True under mark-on-push (dead code) - correctly avoided the fatal `== 1` version but didn't yet see the guard is now deletable.",
+        "LeetCode 733 Flood Fill - SOLVED (accepted). Debugged live: fixed mark-after-recurse -> mark-before-recurse; generalized hardcoded old-color 1 / new-color 2 to capture start=image[sr][sc] and compare == start; and added the color==start early-return guard (else infinite recursion, proven via cases B & C)."
+      ],
+      "calibration": {
+        "confident_right": 0,
+        "confident_wrong": 0,
+        "unsure_right": 0,
+        "unsure_wrong": 0
+      },
+      "taught_back": null
+    },
+    {
+      "name": "Traversal Patterns (trees/graphs/grids)",
+      "mental_model": "ONE engine, TWO knobs. BFS/DFS never change; across tree/graph/grid only (1) the neighbor function and (2) whether you need visited change. Tree: neighbors=children, no visited. Graph: neighbors=adj[node], need visited. Grid: neighbors=4 dirs+bounds check, mark in-place. Matrix: neighbors = all j where isConnected[i][j]==1, need visited set.",
+      "mnemonic": "Same engine, two knobs: NEIGHBORS + VISITED. Shortest/levels -> BFS; explore-all/paths/components/cycle -> DFS. | Comprehension order: [WHAT for VAR in WHERE if CONDITION] - WHAT first, it's the append() yanked to the front. | e-NUM-erate: the NUMber comes first - (index, value), like '1. eggs'. | Self-loop lives on the DIAGONAL M[i][i] - the node staring at its own reflection.",
+      "mastery": "shaky",
+      "last_reviewed": "2026-07-29",
+      "review_interval": 1,
+      "aces": 0,
+      "past_mistakes": [
+        {
+          "note": "Matrix row vs neighbor list (recurring, echoes Graph Representations): initially said 'neighbors of i = isConnected[i]'. But isConnected[i] is the whole ROW of 0/1s; the neighbors are the indices j where isConnected[i][j]==1 and j!=i (an O(V) row-scan). Corrected and CONFIRMED live on a concrete 3x3 matrix (neighbors of 0 = {1}). Re-pull in a quiz.",
+          "high_confidence": false
+        },
+        {
+          "note": "2026-07-04 quiz: index-vs-value slip extracting matrix neighbors. Wrote `[node for node in M[i] if M[i][node]==1]` - `for node in M[i]` yields the ROW VALUES (0/1), not column indices, so M[i][node] indexes by a value (garbage: returns [1,1,0] for [1,1,0]). Fix: iterate INDICES - `[j for j in range(len(M[i])) if M[i][j]==1 and j!=i]` or `[j for j,val in enumerate(M[i]) if val==1 and j!=i]`. Corrected + confirmed ([1,2,4] for [0,1,1,0,1]). GENERAL RULE: `for x in lst` gives elements; enumerate(lst) gives (index, element).",
+          "high_confidence": false
+        },
+        {
+          "note": "2026-07-17 quiz (3rd occurrence of index-vs-value, two new disguises): (1) wrote `[ if M[i][j]==1 for j in range(...) ]` - dropped the output expression and misplaced the if; correct order is [WHAT for VAR in WHERE if CONDITION]. Got the indices-not-values part RIGHT with range. (2) On the enumerate rewrite, unpacked `for _, j in enumerate(M[i])` - threw away the INDEX and kept the VALUE, then indexed M[i][j] by a 0/1 value (garbage: [1,1] instead of [1,2] on row [0,1,1]). enumerate yields (index, value) - INDEX FIRST. (3) Then excluded the wrong j for the self-loop: with i=2 dropped j=3 instead of j=2; the self-loop is the DIAGONAL cell M[i][i]. All three corrected; final micro-rep (M[1]=[1,1,0,1], i=1 -> [0,3]) PASSED. Re-pull: dictate a fresh enumerate-based matrix-neighbor one-liner cold.",
+          "high_confidence": false
+        },
+        {
+          "note": "2026-07-29 quiz Q3 - 4th OCCURRENCE of index-vs-value, and the enumerate form was ASKED FOR but not used. Given M[2]=[1,0,1,1,0], i=2, they dictated `[nb for nb in M[2] if M[2][nb] == 1]` - the exact broken 07-04 form. RAN IT: returns [0, 0] (truth [0, 3]). Full anatomy shown: nb takes the VALUES 1,0,1,1,0, so M[2][nb] only ever peeks at houses 1 and 0; columns 2,3,4 never examined once; node 3 (real neighbour) silently dropped; node 0 emitted twice. Also omitted the `and j != i` diagonal exclusion entirely (M[2][2]=1 was a planted self-loop). NEW PHYSICAL ANCHOR (talking had failed 3x, so a purpose-built visual was generated: .dsa-tutor/visuals/index-vs-value.html, 12 steps, 2 embedded questions): a matrix row is a STREET OF HOUSES; the number inside a house is only its PORCH LIGHT (on/off); a neighbour is a HOUSE NUMBER, never a light state. `for x in lst` walks the street seeing only lights and loses track of where it is standing; enumerate reads the number off the mailbox. THE SMELL (the reusable detector): in a 5-node graph legal indices are 0..4, but nb could only ever be 0 or 1 - 'if the thing you index with can only be 0 or 1, you are using a light switch as an address.' RE-PULL: dictate the enumerate one-liner cold on a fresh row, and state the smell-detector.",
+          "high_confidence": false
+        },
+        {
+          "note": "2026-07-29 Q3 RESOLUTION (3 attempts, ending in a SELF-CATCH - first time this soft spot corrected itself): attempt 2 `[nb for idx, nb in enumerate(M[2]) if M[2][idx] == 1]` -> [1,1,1]. The DISEASE was cured here (unpacked index-first; filter indexed by idx, not by a light) but the two comprehension SLOTS were swapped: emitted the light as the answer, and used the number as a detour to re-fetch the light already in hand (M[2][idx] IS nb). Framing that landed: 'the NUMBER is the ANSWER, the LIGHT is the TEST' - enumerate hands you both, one per job. Attempt 3 `[idx for idx, nb in enumerate(M[2]) if nb == 1]` -> [0,2,3]: slots correct, diagonal still missing (flagged 3x before it stuck). Attempt 4: typed `and nb != 2` (ALWAYS TRUE - a 0/1 light can never equal 2, filters nothing, still [0,2,3]) then INTERRUPTED THEMSELVES and fixed it to `and idx != 2` -> [0,3] CORRECT. The smell detector ('if you are comparing/indexing with something that can only be 0 or 1, you are using a light switch as an address') fired unprompted. Also worth re-pulling: they still hardcode 2 instead of i; general form = [j for j, val in enumerate(M[i]) if val == 1 and j != i]. NOTE: never reported the 2 embedded visual answers - unclear whether index-vs-value.html was opened.",
+          "high_confidence": false
+        }
+      ],
+      "visual": [
+        ".dsa-tutor/visuals/traversal-patterns.html",
+        ".dsa-tutor/visuals/index-vs-value.html"
+      ],
+      "practice_done": [
+        "Converted a recursive grid flood-fill (DFS) to iterative by recognizing it as dfs_iterative + grid knobs (neighbors = 4 DIRS + bounds check, visited = mark grid cell 0 in place). Correctly identified grid=implicit graph.",
+        "Solved LeetCode 200 (grid knobs) and 547 Number of Provinces (adjacency-MATRIX knobs) - same DFS engine, only the neighbor function + visited representation changed. Framework transfer confirmed across grid AND matrix."
+      ],
+      "calibration": {
+        "confident_right": 0,
+        "confident_wrong": 0,
+        "unsure_right": 0,
+        "unsure_wrong": 0
+      },
+      "taught_back": null
+    },
+    {
+      "name": "Connected Components",
+      "mental_model": "Islands in an ocean: each maximal group of mutually-reachable nodes is one island. Count islands by walking each unvisited node and flood-filling its whole island with BFS/DFS.",
+      "mnemonic": "Outer loop = find dry land; inner traversal = flood the whole island. Count++ per fresh island.",
+      "mastery": "solid",
+      "last_reviewed": "2026-07-29",
+      "review_interval": 3,
+      "aces": 4,
+      "past_mistakes": [
+        {
+          "note": "2026-07-29 quiz Q5 (component count via DSU) MISS->FIXED. Asked for the one-line formula; answered with `[(lambda x: x+1)(0) for n1,n2 in edges if find(n1) != find(n2)]` - three problems: (1) NEVER CALLED UNION - find-only DIAGNOSES without TREATING, so there is no placement that works: run instead of the union pass, nothing merges and every edge looks like a merge (got [1,1,1,1] -> 6-4=2); run after a real union pass, every edge is already internal so nothing passes (got [] -> 6-0=6); truth was 3. Evidence run live on their own UnionFind with n=6, edges [(0,1),(1,2),(0,2),(3,4)]. (2) never produced the formula at all - the answer needs n. (3) `(lambda x: x+1)(0)` is an elaborate way to write 1. TAUGHT (in their GROUPS/LEADERS vocabulary): start with n one-person groups; every union returning True fuses two groups into one, RETIRING EXACTLY ONE LEADER; a False retires nobody. 'COUNT THE RETIRED LEADERS' -> components = n - sum(uf.union(u,v) for u,v in edges) (True sums as 1). Exact because two groups go in and one comes out - never two, never zero. Confirm question (n=7, 3 True + 2 False) PASSED: said 4 components and that the Falses mean the endpoints already share a component; sharpened to 'redundant edge, closes a cycle = LC 684's answer'. NOTE: mastery kept 'solid' - the island/flood-fill concept itself was never in doubt (LC 200/695/547 all solved); the miss was the DSU-counting idiom, logged in full under Union-Find too.",
+          "high_confidence": false
+        }
+      ],
+      "visual": [],
+      "practice_done": [
+        "Prediction exercise on 5x6 grid: correctly identified that flood-fill from (0,0) wipes only the connected island, and named BOTH untouched survivor islands {(4,0)} and {(0,4),(0,5),(1,5)}. Internalized 'flood one island, others survive'.",
+        "SOLVED LeetCode 200 Number of Islands (outer-loop count + flood), 695 Max Area of Island (flood returns a size / running count), 547 Number of Provinces (components on an adjacency matrix). Connected-components pattern locked across grid + matrix."
+      ],
+      "calibration": {
+        "confident_right": 0,
+        "confident_wrong": 0,
+        "unsure_right": 0,
+        "unsure_wrong": 0
+      },
+      "taught_back": null
+    },
+    {
+      "name": "Cycle Detection",
+      "mental_model": "TWO axes of visited, not one. Plain traversal = 1 axis (seen?) which only guarantees TERMINATION. Cycle detection adds a 2nd axis (still on my current path?). Directed graph: 3 colors - WHITE unseen, GRAY in-progress/on the DFS recursion stack, BLACK fully done. A cycle EXISTS iff DFS finds an edge to a GRAY node (a back edge). Edge to BLACK = harmless convergence, not a cycle. (Undirected variant: plain visited + parent check.) | UNIFYING FRAMEWORK (the deep one): a cycle == a BACK EDGE and nothing else (edge back to an ancestor still on the DFS stack/gray). Both directed & undirected detect the same thing. DFS edge classification by neighbor color: WHITE = tree edge (recurse), GRAY = back edge (CYCLE), BLACK = forward/cross edge (NOT a cycle). KEY FACT: undirected DFS has NO cross/forward (black-row) edges - two-way streets forbid them (if u-v and neither is the other's ancestor, the earlier-entered one would have descended the two-way edge -> contradiction). So undirected: every visited non-parent neighbor is a back edge -> only need visited+parent. Directed: edges to BLACK nodes (forward/cross) are visited-but-not-ancestors = not cycles -> must separate gray from black.",
+      "mnemonic": "Gray = on the stove; point back to gray and the snake eats its own tail = CYCLE. Black is served and safe. Plain visited STOPS loops; the gray axis DETECTS them. | DIRECTED vs UNDIRECTED = one-way vs two-way streets: 'STACK vs DOOR'. Directed watches the STACK (cycle = edge to GRAY; 3 colors; NO parent - A<->B is a real 2-cycle). Undirected watches the DOOR (cycle = a visited neighbor that isn't your PARENT; 2 states; NO gray/black). Gray for one-way, Parent for two-way. | U-TURN vs ROUNDABOUT: one two-way road walked back = U-turn (ONE edge, innocent - that's what parent-skip skips). Two one-way roads back = roundabout (TWO distinct edges, real 2-cycle - that's why directed must NOT skip the parent).",
+      "mastery": "solid",
+      "last_reviewed": "2026-07-29",
+      "review_interval": 3,
+      "aces": 1,
+      "past_mistakes": [
+        {
+          "note": "Conflated the two jobs of 'visited': assumed visited alone detects cycles. Untangled it - plain 2-state visited only prevents infinite loops (termination) by refusing to re-recurse; it CANNOT tell whether a re-seen node is still on the current path (cycle) vs already finished (convergence) because it lacks that 2nd axis. Resolved cleanly; learner named it 'axis of information'. [Re-tested 2026-07-17 quiz Q1: PASSED - articulated termination-vs-detection and the ON_STACK third state unprompted; only needed the word 'convergence' supplied for the black case.]",
+          "high_confidence": false
+        },
+        {
+          "note": "Got genuinely confused on WHY directed vs undirected cycle detection differ. Built intuition via ONE-WAY vs TWO-WAY streets: directed one-way -> an edge to a FINISHED (black) node can't loop back, so you MUST distinguish gray(open) vs black(closed), and parent is irrelevant (A->B + B->A is a real 2-cycle); undirected two-way -> any visited non-parent neighbor guarantees a loop (no cross edges in undirected DFS), so track PARENT only, no black needed. Contrast anchor: an extra edge to a seen node is innocent when directed (lands on black) but forms a triangle=cycle when undirected. Mnemonic banked: STACK vs DOOR.",
+          "high_confidence": false
+        },
+        {
+          "note": "2026-07-17 quiz Q2 MISS: INVERTED the 2-cycle question - said undirected single edge A-B IS a cycle ('A->B and B->A is valid traversal') and implied directed A<->B isn't. Backwards: undirected A-B is ONE edge, walking it both ways is a U-TURN not a loop (a cycle needs distinct edges); directed A->B + B->A are TWO distinct edges = a real 2-cycle (mini-roundabout). Self-contradiction surfaced: they correctly said parent-skip exists to avoid re-walking the came-from edge - but if the U-turn were a real cycle, parent-skip would be a BUG not a feature. Anchor: count the roads / U-turn vs roundabout. Retested on triangle A-B-C DFS (C sees parent B = skip, visited non-parent A = cycle): PASSED but gave no 'why' - re-pull WITH justification next time.",
+          "high_confidence": false
+        },
+        {
+          "note": "2026-07-18 refactor of has_cycle_undirected took 3 attempts: (1) wrote `if node in visited` immediately AFTER visited.add(node) - always True, so any non-parent neighbor reported a false cycle (checked the node in hand instead of the neighbor nb); (2) rewrite moved the check to on-entry style (legit - recursive twin of mark-on-POP) but DELETED the outer-loop guard `node not in visited` from the any() - calling dfs on an already-explored node instantly returns True (tree printed True via dfs(1,-1)); swapped one bug for the other. Rule banked: the outer loop finds DRY LAND only - same guard as connected components; BOTH check styles (check-neighbor-before-recurse and check-on-entry) need it. (3) fixed, 9/9. HABIT FLAG: claimed 'done'/'fixed' THREE times without running the tests - tutor had to run them. Drill: show test output BEFORE claiming done.",
+          "high_confidence": false
+        },
+        {
+          "note": "2026-07-29 quiz Q2 RESOLVED (the U-turn/roundabout inversion, third encounter, this time WITH justification demanded): PASSED cleanly. Said G2 (directed A->B, B->A) has the cycle and justified it at the DEFINITION level unprompted - 'a cycle is present if a node in the path is reached from an entirely separate edge.' That is the missing piece from 07-17/07-18 supplied without help. Payoff tied back to code: G1's A->B->A reuses the single arrival edge (U-turn) = exactly what parent-skip refuses; G2's two one-way roads are distinct edges = exactly why directed must NOT skip the parent. Parent-skip is a feature in undirected and would be a bug in directed. Mastery raised learning->solid.",
+          "high_confidence": false
+        }
+      ],
+      "visual": [
+        ".dsa-tutor/visuals/cycle-detection.html",
+        ".dsa-tutor/visuals/cycle-edge-classification.html",
+        ".dsa-tutor/visuals/done-status-role.html"
+      ],
+      "practice_done": [
+        "Watched cycle-detection.html (3-color DFS visual). Before coding, correctly answered both decision points: paint BLACK only AFTER the neighbor loop (else a back edge sees black-safe and the cycle is missed), and wrap DFS in an outer loop over all nodes for disconnected graphs. Then self-implemented has_cycle_directed(graph) in graphs/graphs.py - encoded colors as (node, ON_STACK)/(node, DONE) tuples in a set; correct + verified 7/7 on stress tests (basic cycle, diamond DAG, self-loop, cycle-in-2nd-component, longer DAG, empty). Then REFACTORED has_cycle_directed to the idiomatic single color-dict + any() form (defaultdict(int) default WHITE).",
+        "DIRECTED vs UNDIRECTED intuition: struggled at first, felt they were only parroting. Built deep framework (cycle == BACK EDGE; edge classification white/gray/black; undirected has no cross edges). Then it clicked via a purpose-built visual (cycle-edge-classification.html) on graph 1->2->3->1, 1->4, 4->3 showing 3->1 hits GRAY (cycle) vs 4->3 hits BLACK (innocent). Learner asked for a VISUAL explanation - that was the unlock; prefers seeing colors flip over head-tracing.",
+        "Self-implemented has_cycle_undirected(graph) with parent param + parent-skip; correct, verified 9/9 (triangle, square, self-loop, single-edge=NOT a cycle via parent exclusion, disconnected tree+triangle=True, two-trees=False, path, tree, empty). Coached two upgrades (quality, not bugs): (a) 3 colors are overkill for undirected - a plain visited set suffices because undirected has no black-row edges, so a non-parent visited neighbor is ALWAYS on-stack (their DONE branch never fires = the theorem showing up in their own code); (b) fragile outer loop used a `result` var assigned only inside the NOT_EXPLORED guard but read every iteration - folded into `any(node not in visited and dfs(node,-1) ...)`. PENDING as of 2026-07-17: both upgrades still NOT applied in graphs/graphs.py (lines ~135-152) - resume here.",
+        "2026-07-17: got lost on 'how do I track the path without colors' for the undirected refactor, then asked the sharp question 'where is DONE even USED in has_cycle_directed? no branch tests it'. Taught: DONE is used NEGATIVELY - it makes both ifs false; status[node]=DONE is the UN-GRAYING (pan off the stove; you don't test for black, black is how a node stops testing positive for gray). Deleting that line makes the directed diamond false-positive. Undirected contrast: two-way diamond IS a 4-cycle (convergence is a one-way-street phenomenon); a visited non-parent neighbor is ALWAYS a gray ancestor. Generated .dsa-tutor/visuals/done-status-role.html, expanded to 5 acts on request ('give example for undirected too'): (1) DONE's silent fall-through in directed diamond; (2) DONE line deleted -> false cycle in a DAG; (3) undirected diamond = real 4-cycle, check fires on GRAY ancestor 0; (4) undirected TREE 0-1,0-2,1-3,1-4 -> every re-examined neighbor is the gray PARENT, DONE written 5x / read 0x, finished subtrees are SEALED (their one entering edge is already spent); (5) counterexample hunt on triangle -> the 1-2 door needed to peek at black 1 instead recruits 2 as 1's descendant; alarm always fires on gray first; black encounters impossible. 4 embedded predict questions total. 2026-07-18: learner watched it and attempted the refactor - structure PERFECT (plain visited set, parent-skip, visited-check-then-recurse, any() fold) but one bug: line checks `if node in visited` instead of `if nb in visited` - node was JUST added to visited, so it's always True and any non-parent neighbor reports a false cycle (their own tree test prints True instead of False). Also declared 'done' WITHOUT running the tests. PENDING: they run graphs.py, see tree=True, trace dfs(0,-1) to find the node-vs-nb slip themselves.",
+        "2026-07-18: refactor COMPLETE and verified - final form: plain visited set, check-on-entry (mark-on-pop twin), parent-skip, guarded any() outer loop. Stress-tested 9/9 (triangle, square, self-loop, single-edge U-turn=False, tree, path, disconnected tree+triangle=True, two trees, empty). Implementation phase of Cycle Detection DONE. Practice recommended: LC 207 Course Schedule (has_cycle_directed on a prerequisites graph - the bridge to Topological Sort) and LC 684 Redundant Connection (undirected; DFS now, revisit with Union-Find later). dsapanicle.com link unverified (reachability check blocked). NEXT: they solve 207, review it, then mark Cycle Detection done -> Topological Sort + roadmap regen.",
+        "LeetCode 207 Course Schedule - SOLVED, ACCEPTED (2026-07-18). Recognized it as has_cycle_directed on a prerequisites graph (stripped the story). Quality notes: guarded any() over range(numCourses) so no-prereq courses are covered (isolated-node lesson transferred), clean 3-color DFS, `not` inverted at the boundary. Reviewed correct; flagged recursion-limit caveat (2000-course chain vs ~1000-frame default)."
+      ],
+      "calibration": {
+        "confident_right": 0,
+        "confident_wrong": 0,
+        "unsure_right": 0,
+        "unsure_wrong": 0
+      },
+      "taught_back": null
+    },
+    {
+      "name": "Union-Find (DSU)",
+      "mental_model": "LEARNER'S OWN VOCABULARY (always use it): GROUPS and LEADERS, not islands/labels. Naive scheme: every member stores their leader directly -> same-group check is O(1), but a merge must relabel the entire losing group. DSU scheme: members store only their immediate BOSS (parent pointer, org-chart chain); the leader is whoever is their own boss. find = climb the boss chain; union = the losing leader gets a new boss.",
+      "mnemonic": "THE LOSER PAYS - so make the SMALL group lose (small joins large). Cycle test: an edge inside one group is redundant - same leader twice = cycle. | Lazy unions build a CONGA LINE (skewed-BST disease: find O(n)). Fix 1 small-joins-large: depth grows only by LOSING, losing DOUBLES your group -> height <= log2 n. Fix 2 path compression: climb once, everyone met gets the leader's SPEED DIAL. Together ~O(1) amortized (inverse Ackermann <= 5). | SUBTLETY: union links the two LEADERS, never the edge's endpoints.",
+      "mastery": "learning",
+      "last_reviewed": "2026-09-26",
+      "review_interval": 3,
+      "aces": 1,
+      "past_mistakes": [
+        {
+          "note": "Union-by-size first attempt: winner absorbed += 1 instead of the loser's whole count. Insidious - correct whenever the loser is a singleton; first diverged on (3,4) (loser {4,5} = 2 members): size[find(1)] printed 4 (= 1 + wins, counting VICTORIES) not 5 (members). Anchor: 'the merger acquired the company but only put the CEO on payroll' - absorb the ROSTER. NOTE: bug was TOLD on request (learner declined to run/trace) - re-test this cold: give a stream where the loser is bigger than 1 and ask what += 1 would print.",
+          "high_confidence": false
+        },
+        {
+          "note": "Recursive path compression attempt (2026-07-20): REBINDING bug - `node = self.find(self.leader[node])` rebinds the local name to the root, losing the asker's identity; then `self.leader[node] = node` stamps the ROOT's own record (leader[root]=root, no-op). Compression silently ABSENT while every existing test passes (find still returns correct leaders): probe showed leader[5] = 4 before AND after find(5). Anchor: 'gave the CEO the CEO's speed dial - the member who called never got the number.' Same disease as their old `global dfs_order` lesson: rebinding a local changes nothing outside; WRITING INTO THE DICT does. Correct idiom: each frame writes the returned root into ITS OWN node's dict entry while `node` still means the asker.",
+          "high_confidence": false
+        },
+        {
+          "note": "2026-07-29 quiz Q1 (COLD retest of the `+= 1` bug - the one previously TOLD, not self-found): MISS on both parts. Stream (1,2),(3,4),(4,5),(2,3): said the buggy print is 3 and first divergence is (4,5). Root misconception: watched the WINNER's size instead of the LOSER's roster. `size[winner] += 1` is accidentally CORRECT whenever the loser's group is a SINGLETON, so it hid through (1,2) loser{2}, (3,4) loser{4}, (4,5) loser{5} - at (4,5) the winner IS size 2, but the acquired company is a one-person shop. First divergence is (2,3): loser {1,2} = 2 members, buggy writes size[3]=4, correct writes 5. Anchor sharpened: 'the merger acquired the company but only put the CEO on payroll - invisible until you acquire a company with EMPLOYEES.' Retested on the (2,3) step alone: PASSED (named loser {1,2} and buggy 4). RE-PULL: give a stream whose FIRST merge already has a 2-member loser so the bug cannot hide.",
+          "high_confidence": false
+        },
+        {
+          "note": "2026-07-29 quiz Q5 (counted as a DSU application miss): tried to count components with a find-only comprehension and no union call. THE LESSON: union's BOOLEAN RETURN VALUE is the counter - it tests and merges in the SAME pass; find without union is diagnosis without treatment. Idiom banked: components = n - sum(uf.union(u,v) for u,v in edges). Confirm question passed (n=7, 3 True + 2 False -> 4 components; Falses = redundant edges closing cycles). This is exactly the LC 547-with-DSU idiom from the parked practice ladder, so they are primed for it.",
+          "high_confidence": false
+        },
+        {
+          "note": "2026-09-26 complexity of LAZY DSU: times right (find O(n) conga, union O(n) = 2 finds + O(1) link) but said find SPACE = O(n) 'because we use the leader dict' while union space = O(1) (same dict - inconsistent). Misconception: charging the data structure's STORAGE to an operation's AUXILIARY space. Anchor: binary search on an n-array is O(1) space - the array was already there. Rule: storage is paid once at __init__ (O(n)); per-operation space = what the operation ADDS (iterative find: one variable, O(1)). Follow-up probe: recursive find's aux space = call stack O(depth).",
+          "high_confidence": false
+        },
+        {
+          "note": "2026-09-26 teach-back of log n bound: SIZE != HEIGHT. Claimed height stays same unless tie. Counterexample (live): star{0..4} rooted 1 (size5,h1) + {5,6,7,8} rooted 8 (size4,h2, built (5,6),(7,8),(6,8)); union(5,1) -> 5->6->8->1, height 3, no tie. Correct argument tracks ONE node: it sinks only when its group LOSES, and losing at least DOUBLES its group -> <= log2 n sinks.",
+          "high_confidence": false
+        },
+        {
+          "note": "2026-09-26 trace of their infinite-loop find: said after pass 1 the while checks leader[1]==1 (stops). Misconception: believed `node` ADVANCED to 1 - carried over from the iterative version whose body did `node = self.leader[node]`. In the recursive version nothing reassigns `node`; the recursive call's `node` lives in a DIFFERENT frame. So the check is leader[0] != 0 -> 1 != 0 -> True forever. Inverse twin of the July rebinding bug: then node was rebound when it shouldn't be; now they assumed it was rebound when it isn't. Anchor: 'each frame's node is its own asker - only an assignment to node moves it'. FIX TOLD on request (not self-found): while -> if. Verified on scratch copy: leader {0:1,1:3,...} -> find(0)=3 -> {0:3,1:3,...}; union(0,4) False, size 5. RE-TEST COLD next session: show the while version, ask what happens on find of a depth-2 node.",
+          "high_confidence": false
+        }
+      ],
+      "visual": [
+        ".dsa-tutor/visuals/union-find.html"
+      ],
+      "practice_done": [
+        "Motivation owned: analyzed LC 684 naive DFS-per-edge as O(n^2) unprompted and asked for the efficient way. Reframe given: MAINTAIN connectivity instead of RECOMPUTING it; cycle test = edge (u,v) closes a cycle iff find(u)==find(v) before merging.",
+        "Socratic derivation step 1 PASSED (2026-07-18): in the naive leader-dict, saw that the MERGE pays O(size of losing group) - electing the 2-person group's leader forces 8,000 relabels - implying the big group's leader should win (union by size, self-derived). Step 2 PASSED: under the boss-pointer scheme, correctly said only the losing LEADER's record changes (B's leader points to A's leader instead of itself) -> union is O(1) regardless of group sizes. Step 3 PASSED: identified find = O(chain) and named the worst shape unprompted - 'linked list skewed to right or left lol' (connected it to skewed-BST disease). Both fixes taught: small-joins-large redeployed from their own loser-pays rule (+ doubling argument for log n) and path compression (speed-dial). Generated union-find.html (3 acts: conga line; small-joins-large star incl. union-links-LEADERS subtlety; compression heals the spine; 2 embedded star questions). NEXT: watch visual + report star answers -> implement DSU in own file (find/union plain, then + size, then + compression) -> LC 684.",
+        "IMPLEMENTATION COMPLETE + VERIFIED (2026-07-20) in graphs/union_find.py: all three layers - lazy setdefault registration, union-by-size (all branches absorb the roster), recursive path compression (canonical one-liner; learner assembled it after the call-stack-IS-the-collected-path + photocopy-on-the-way-up walkthrough). Evidence: stream 4xTrue + (1,5) False + size[find(1)]==5 unchanged across all three layers; probe leader[5] 4 -> 1 after find(5) (probe run on first 4 edges only - union(1,5) itself compresses mid-stream, noted to learner). Hit and fixed BOTH canonical DSU bugs (+= 1 victories-not-people; rebinding no-op) - see past_mistakes. Style leftovers (optional): duplicate tie/> branches, unused defaultdict import + edges param.",
+        "PRACTICE LADDER RECOMMENDED (2026-07-20), learner chose problems-before-quiz: 1) LC 1971 Find if Path Exists (warm-up: one find==find), 2) LC 684 Redundant Connection (first union returning False; tricky test = redundant edge early vs late), 3) LC 547 re-solve with DSU (transfer rep vs their DFS solve; counting idiom count = n minus successful unions; needs n - their own API question answered by a real problem; tricky test = all-isolated matrix), 4) LC 990 Satisfiability of Equality Equations (string keys -> setdefault shines; two-phase: union all ==, then check != for shared leader; tricky test = a==b,b==c,a!=c), 5) LC 1319 Network Connected (boss fight: redundant-edge count + component count + spare-cable sufficiency). Stretch: LC 721 Accounts Merge. PARKED for next topic: LC 210 (topo sort front door - told NOT to do yet). Expectation: one tricky local test per problem BEFORE submitting, bring evidence. Quiz deferred to their return, opens the next session. PREMIUM ADDENDUM (learner has LC premium, stated goal = RETENTION): LC 261 Graph Valid Tree slotted after 684 - aimed at their U-turn/roundabout past mistake; solve TWICE (undirected-DFS way + DSU way: n-1 edges, no False unions, one group) - the two-tools-one-problem comparison is the top retrieval exercise. LC 323 paired with 547 (edge-list vs matrix = same counting idiom, different neighbor knob; matrix re-tests the enumerate soft spot deliberately). Retention protocol given: (1) name the pattern in writing BEFORE coding, (2) log the bug hit per problem, (3) re-solve 684 from scratch in ~1 week no peeking - ADD 684-resolve to the review schedule around 2026-07-27.",
+        "2026-09-26 REBUILD in graphs/mst.py for Kruskal: wrote LAZY DSU (correct results, bool return OK, links leaders OK) but DROPPED both fixes - winner chosen by LABEL (leader1 > leader2), no size, no path compression; also self.size = int (name will clash with size dict). Trace probe (0,1),(1,2),(2,3),(3,4): PASSED - said find(0)=4 hops, 'skewed tree' (= conga line). NEXT: re-derive union-by-size, then path compression, in mst.py. | Union-by-size re-derived verbally: PASSED ('merge the smaller-size group into the larger'). Next probe = cold roster retest (+= 1 bug). | COLD ROSTER RETEST PASSED (2026-09-26): for A={0,1}(ldr 1,sz2) vs B={2,3,4}(ldr 3,sz3) wrote leader[leader1]=leader2; size[leader2] += size[leader1] - absorbed the whole roster, no += 1. The July 'CEO on payroll' bug appears fixed; Confidence: SURE ('the loser's whole group joins') -> confident_right, interval 1->3. NEXT: implement size in mst.py, then path compression. | Union-by-size IMPLEMENTED in mst.py, verified: conga stream -> star {all:1}, size[1]=5; mixed stream (0,1),(2,3),(3,4),(1,2),(0,4) -> [T,T,T,T,F], size[3]=5, ties to else OK. Reused self.size name as the dict (fine). Comment says 'union by rank, where rank = size' - clarified rank(height bound) vs size are distinct variants. NEXT: path compression, motivated by 0->1->3 still 2 hops. | Complexity of union-by-size DSU (iterative find): PASSED - find O(log n)/O(1) aux, union O(log n)/O(1) aux; space misconception self-corrected. Learner asked NOT to be given solutions; recursive-find aux-space question left OPEN (answer: O(depth) call stack) - re-ask later. | NEXT: path compression question pending (what should find(0) write while climbing 0->1->3). | Path compression IDEA in words: PASSED ('write the new leader on every node of the path'). IMPLEMENTATION: recursive `while leader[node] != node: leader[node] = find(leader[node])` -> INFINITE LOOP on any non-root node (body sets leader[node]=root != node, so while condition never goes false). Repro: UnionFind(4), union(0,1), union(2,3), find(0) hangs. Not told the fix (learner asked for no solutions); Socratic trace question posed. | while->if fix given; learner to apply in mst.py. Then Kruskal (mst_kruskels still `pass`)."
+      ],
+      "calibration": {
+        "confident_right": 1,
+        "confident_wrong": 0,
+        "unsure_right": 0,
+        "unsure_wrong": 0
+      },
+      "taught_back": "2026-09-26 PARTIAL: log n height argument. Gap: equated bigger SIZE with taller HEIGHT ('bigger tree is already deeper, height same unless tie') and reasoned about the whole tree instead of following ONE node. Counterexample run on their mst.py: 5-star (height 1) absorbs 4-node chain (height 2) with no tie -> height 3. | RE-ASKED following one node: PASSED - 'its size at least doubled, so at most log2 n sinks'. Doubling argument owned."
+    },
+    {
+      "name": "Topological Sort",
+      "mental_model": "A LINEUP, not a WALK. Lay every node on a line left-to-right; the order is valid iff EVERY edge points rightward. Consecutive nodes need NOT be adjacent (A,B,C,D is valid for A->C,B->C,C->D even though A->B is not an edge; two disconnected nodes X,Y have a topo order but no path). Getting dressed: socks before shoes, pants before belt - the output is the single sequence you put every garment on in, and unrelated garments (socks vs shirt) still both appear. KAHN'S: in-degree = your WAIT COUNT, how many people you are still waiting on; 0 = free to walk. Place a node -> everyone waiting on it crosses a name off; a node joins the ready pool only when its LAST blocker leaves.",
+      "mnemonic": "A topological order is a LINEUP, not a WALK - every arrow points RIGHT. | Your in-degree is your WAIT COUNT; zero = free to go. | SHORT LINEUP = CYCLE: if len(order) < n when the pool runs dry, the leftovers are all waiting on each other = deadlock. One integer comparison gives you LC 207 for free. | The pool can be a queue, stack, anything - the container only picks WHICH valid order you get, not whether it is valid.",
+      "mastery": "learning",
+      "last_reviewed": "2026-08-24",
+      "review_interval": 1,
+      "aces": 0,
+      "past_mistakes": [
+        {
+          "note": "2026-07-29/30 DIAGNOSE phase - the one real confusion, and it was surfaced by an honest question rather than a bluff (praised): asked 'what do you mean by order itself? Is it a path? Is it a path between source and destination?' Conflated a topological ORDER with a PATH. Corrected with a counterexample drawn from their OWN answer: they had said A,B,C,D for A->C,B->C,C->D - and A->B is not an edge, so their own valid order is not a path. Reinforced with two disconnected nodes X,Y (valid orders X,Y and Y,X; no path exists at all). Rule given: lay all nodes on a line, valid iff every edge points RIGHT; showed the bad lineup C,A,B,D where A->C points left. RE-PULL: ask whether consecutive nodes in a topo order must be adjacent. [RESOLVED 2026-08-24 warm-up after a 25-day gap: given A->C,B->C,C->D with output A,B,C,D (A,B adjacent in output, no A-B edge), answered correctly and unprompted that it is still valid - 'a valid order, not the only order, not a path traversal.' Order-vs-path distinction OWNED.]",
+          "high_confidence": false
+        },
+        {
+          "note": "Detection-rule gap (caught and closed same session): after correctly running Kahn's on A->B,B->A they generalised the cycle test as 'no in-degree-0 node available -> return False', i.e. THE POOL STARTS EMPTY. Stress-tested on A->B, B->C, C->B where the pool starts as [A] and only empties PARTWAY. They traced it correctly and said 'graph is broken', but the crisp rule had to be supplied: count the LINEUP, not the pool - len(order) < n means the leftovers are deadlocked. RE-PULL: give a graph where the pool starts non-empty and ask for the exact cycle check.",
+          "high_confidence": false
+        }
+      ],
+      "visual": [
+        ".dsa-tutor/visuals/topological-sort.html"
+      ],
+      "practice_done": [
+        "2026-08-24: self-implemented topological_sort(graph) in graphs/graphs.py (Kahn's/BFS). Correct + verified on acyclic {0:[1,2],1:[3],2:[3],3:[]} -> [0,1,2,3], cyclic {0:[1],1:[2],2:[0],3:[2]} -> None, and 1-indexed relabel {1:[2,3],2:[4],3:[4],4:[]} -> [1,2,3,4]. WINS: index-first enumerate cold (the 4x soft spot, done right); [0]*len init registers isolated/source nodes; dropped the imprecise mid-loop cycle check, used only the crisp len(order)!=len(graph). ROBUSTNESS: hit the list-indexed-by-node contiguity assumption via a what-breaks (relabel 1..4 -> IndexError, predicted correctly), refactored in_degree from list to defaultdict keyed by label. CLEANED registration to plain dict + explicit `for node in graph: in_degree_list[node]=0` pre-seed then count (self-refactored, explained the source-node WHY correctly). Then self-implemented is_valid_topo_order(graph, order): len guard + position map via enumerate (index-first, 5th clean rep of the soft spot) + check pos[u] > pos[v] for every edge -> False. Ran graphs.py: True/True/False/True/False, all matched predicted comments; test design praised (chose [0,2,1,3]->True to probe non-uniqueness AND [1,2,4,3]->False for a real 3->4 violation). HABIT: said 'done' without pasting output - had to run it myself; named the paste-then-claim drill again. Micro-note given: used defaultdict(int) for order_map where plain {} (scream on missing) is the stricter fit. NEXT: DFS reverse-postorder payoff reveal (topo == DFS finish-order reversed, reuses has_cycle_directed gray/black) then LC 210 Course Schedule II. LC 207 already solved as cycle detection.",
+        "2026-08-24 (cont.): self-implemented topological_sort_dfs(graph) UNPROMPTED by adapting their own has_cycle_directed - two surgical changes: append(node) right after status=DONE (finish moment) + return topo_order[::-1], keeping the any()/dfs back-edge check to return None on a cycle. Produced [0,2,1,3] where Kahn's gave [0,1,2,3] on the same graph = live non-uniqueness demo. TEACH-BACK of why-reverse was CORRECT and complete (deepest-first -> v finishes/BLACK before u -> finish-order [V,U] -> reverse to [U,V]). One direction-word slip: called the valid [U,V] 'right to left'; corrected via the tell that 'right-to-left' actually describes the invalid [V,U]. Anchor re-grounded: every arrow points RIGHT. Cyclic->None evidence for the DFS version CONFIRMED (acyclic [0,2,1,3] / cyclic None; paste-then-report this time, good habit rep). LC 210 Course Schedule II next - not yet started."
+      ],
+      "calibration": {
+        "confident_right": 0,
+        "confident_wrong": 0,
+        "unsure_right": 0,
+        "unsure_wrong": 0
+      },
+      "taught_back": "2026-08-24: explained the DFS-topo why-reverse correctly and unprompted after self-implementing it - for edge u->v, v finishes/turns BLACK first (DFS goes deepest first), so finish-order is [V,U], reversed to [U,V] to put the prerequisite first. One direction-word slip (called valid [U,V] 'right to left') corrected; anchor 'arrows point right' held."
+    },
+    {
+      "name": "Minimum Spanning Tree",
+      "mental_model": "City planner with a price-sorted menu of roads: go top-down, build a road only if it connects two towns that can't already reach each other; a road between already-connected towns only makes a loop. Kruskal grows a FOREST whose groups fuse (bridge edges), not one tree.",
+      "mnemonic": "Sort the menu. Union is the bouncer. Close at n-1. (= edges.sort by weight; loop body is `if uf.union(u,v):` keep; break when len(mst)==n-1). | REDUNDANT beats CHEAP: an edge inside one group is bounced no matter its price.",
+      "mastery": "learning",
+      "last_reviewed": "2026-09-26",
+      "review_interval": 1,
+      "aces": 0,
+      "past_mistakes": [],
+      "visual": ".dsa-tutor/visuals/kruskal.html",
+      "practice_done": [],
+      "calibration": [],
+      "taught_back": null
+    }
+  ],
+  "notes": "Through 2026-07-17. Learner returned after a 12-day break (last session 07-05) and ran the Quick Quiz: Q1 (cycle detection, visited-vs-gray) CLEAN; Q2 (directed vs undirected 2-cycle) MISS->FIXED (U-turn vs roundabout inversion - new past_mistake, retested on triangle OK); Q3 (matrix-neighbor comprehension) MISS->FIXED (3rd index-vs-value occurrence: dropped WHAT + misplaced if, then enumerate unpacked value-first, then wrong diagonal exclusion; micro-rep passed); Q4 (why BFS first-arrival is shortest) PARTIAL (said FIFO, couldn't state the monotone/sorted-queue invariant - taught it); Q5 (list vs matrix costs) MISS->FIXED (priced list ops in V, not degree; celebrity-node retest passed). Intervals reset to 1: Cycle Detection, Traversal Patterns, Graph Representations (latter two downgraded solid->shaky). BFS held at 7 with a depth-gap note. NOT quizzed, still due: Graph Terminology, Connected Components - touch next session. 2026-07-18 (cont.): LC 207 ACCEPTED -> Cycle Detection marked done in curriculum (mastery stays 'learning' pending re-tests: U-turn/roundabout WITH justification). Learner attempted LC 684, correctly analyzed the naive per-edge DFS as O(n^2), and ASKED for the efficient approach -> Union-Find (DSU) pulled forward ahead of Topological Sort (curiosity-driven reorder; topo sort comes immediately after, since 207's gray/black DFS is its foundation). Roadmap regenerated. RESUME AT: DSU layer-2 debugging. Derivation COMPLETE (all 3 Socratic steps passed; GROUPS/LEADERS vocabulary - use it, never islands/labels; visual union-find.html watched, union-links-LEADERS subtlety caught: (2,3) makes 3 point at leader 1). Layer 1 DONE in graphs/union_find.py: class UnionFind, lazy setdefault registration, iterative find, union links leaders, False = redundant edge; verified on stream [(1,2),(2,3),(4,5),(3,4),(1,5)] -> 4x True + (1,5) False. Reasoning fix taught: the BRIDGE edge (3,4) connected 1 and 5, not (4,5); 684's answer = the latecomer edge where union returns False. Learner honestly flagged 'can't translate the optimizations to code' (praised - opposite of the unrun-handoff habit) -> taught the STATE-FIRST bridge: ask what the decision needs to know at the moment it's made; state has a birth/use/update lifecycle. 2026-07-20 STATUS: UNION-BY-SIZE fixed and VERIFIED (5-line stream + size[find(1)]==5; all 3 branches absorb the roster; += 1 bug was told-not-found on request - see past_mistakes; tie/> branches still duplicated, collapse-via-swap = pending style note). Learner slid toward answer-dispensing on 07-18 ('point it out' -> 'give answer for path compression too'); tutor held the line, taught compression as a state-first bridge only (state = the met members; collect-list vs re-walk idioms; invariant = answers never change; probe = leader[5] 4 -> 1). Learner then wrote RECURSIVE compression solo - real attempt, but hit the REBINDING no-op bug (see past_mistakes): probe proved compression absent (4 -> 4) while ALL their file's tests pass - strongest evidence-habit lesson yet (their probe was the one check they omitted). PENDING: one-line fix (each frame writes the root into its own node's dict entry) + FULL evidence in-file (5 lines + 5 unchanged; probe 4 -> 1). Recursion-limit caveat flagged for recursive find. THEN: LC 684 as first DSU kill. THEN: Daily Quick Quiz - due as of 07-19/20: Cycle Detection (U-turn/roundabout WITH justification), Traversal Patterns (cold enumerate one-liner), Graph Representations (list vs matrix costs), DSU (+= 1 retest), plus Graph Terminology & Connected Components (due since 07-11). WATCH: verification habit - 5 unrun handoffs. || 2026-07-29 SESSION IN PROGRESS (9-day break since 07-20; ALL 8 concepts due). Path compression is now FIXED + canonical in graphs/union_find.py (one-liner, writes root into its own node's entry). Running the Daily Quick Quiz: Q1 (DSU += 1 cold retest) MISS->FIXED (winner-size vs loser-roster; see past_mistakes). Q2 (cycle detection U-turn/roundabout WITH justification) PASSED CLEAN - definition-level answer ('reached from an entirely separate edge') given unprompted; mastery learning->solid, interval 1->3. Q3 (cold enumerate one-liner) MISS - 4th index-vs-value occurrence, dictated the broken for-nb-in-row form again despite enumerate being requested; ran it live to show [0,0] vs [0,3]. Verbal correction has now failed 3x, so generated .dsa-tutor/visuals/index-vs-value.html (street-of-houses / porch-light anchor + the 0-or-1 'light switch as an address' smell detector). AWAITING: learner watches it and reports the 2 embedded answers, then dictates the one-liner cold on a fresh row. Q3 RESOLVED over 3 attempts ending in a SELF-CATCH (typed always-True `nb != 2`, caught it unprompted, fixed to `idx != 2`) - first self-correction of this 4x soft spot; kept at interval 1 / shaky pending a cold re-pull on a fresh row with generic i. Q4 (BFS monotone-queue invariant) MISS->FIXED: first answer still circular, taught the invariant with a queue-snapshot table, confirm question PASSED with correct justification. 07-17 depth gap CLOSED, interval 7->16, aces 5. Q5 (component count via DSU) MISS->FIXED: wrote a find-only comprehension with no union call (proved wrong both placements: 2 and 6 vs truth 3) and never gave the formula; taught 'COUNT THE RETIRED LEADERS' -> components = n - sum(union(...)); confirm question passed. QUIZ COMPLETE 2026-07-29: Q1 miss->fixed, Q2 CLEAN, Q3 miss->fixed (3 attempts, self-catch), Q4 miss->fixed, Q5 miss->fixed. NOT quizzed this session and still due: Graph Terminology (due since 07-11, untouched 2 sessions running - PRIORITISE next time), DFS (due 07-20), Graph Representations (passed its 07-17 retest, lower priority). NEXT: practice-ladder status check, then LC 684 as the first DSU kill, then advance to Topological Sort + roadmap regen. 2026-07-29 LEARNER DECISION: parked the DSU practice ladder (LC 1971/684/261/547-DSU/990/1319 + the 684-from-scratch re-solve) to move on to the next topic, explicitly planning to return and review everything after finishing it. Flagged to them that DSU implementation is verified but has NEVER solved a real problem, and that both DSU quiz questions missed today - so DSU stays 'in-progress', NOT done. Advancing to TOPOLOGICAL SORT (roadmap regenerated, topo = current/gold, DSU shown as 'impl done, practice parked'). Starting the per-topic cycle at DIAGNOSE. TOPOLOGICAL SORT started 2026-07-29/30. DIAGNOSE complete (4 probes): (1) gave both valid orders for A->C,B->C,C->D and said 'two' - saw non-uniqueness unprompted; (2) identified has_cycle_directed as the gatekeeper and named circular dependency A->B,B->A as the blocker; (3) MISS/honest-question: conflated order with PATH - corrected via their own A,B,C,D (A->B is not an edge) + disconnected X,Y; (4) after the fix, correctly named A and B as eligible firsts 'as they have no other dependency' = derived in-degree-0 unprompted. TEACH: Kahn's derived Socratically - learner turned the crank correctly (place A -> C drops 2->1, nobody newly free; then traced the deadlock graph 0->1,1->2,2->1 accurately). Anchors banked: LINEUP-not-a-WALK / every arrow points RIGHT / in-degree = WAIT COUNT / SHORT LINEUP = CYCLE. Also taught: pool container choice only picks WHICH valid order. Generated .dsa-tutor/visuals/topological-sort.html (11 steps, 2 acts: 6-node DAG crank + 3-node deadlock; 2 embedded questions - 'is 2 ready at wait count 1?' and 'pool dry with 1 of 3 placed - what does it mean?'). NEXT: learner watches it and reports the 2 answers -> implement Kahn's in graphs/graphs.py -> THEN the payoff reveal (their has_cycle_directed already computes the DFS reverse-post-order variant almost for free) -> LC 210. WATCH: never reported the 2 embedded answers for index-vs-value.html; ask explicitly this time. || 2026-09-26 SESSION (33-day gap since 08-24). Learner requested MST (graphs/mst.py, empty) -> MST now CURRENT; Topo Sort left in-progress (impl done, LC 210 not recorded). Warm-up (ungraded) on Kahn's A->B,B->C,C->D,D->B: traced correctly (order=[A], B drops 2->1, stall) and REFUTED a 'friend' claim that a cycle means nothing gets placed. Asked for the exact cycle check: first answered `if indegree[nb] == 0` (the in-loop ADMISSION test, not the post-loop VERDICT) - named, counterexample A->C,B->C (false yet acyclic); re-asked -> 'compare nodes in order to total nodes' = len(order) < n (1 vs 4). Re-pull: ask them to distinguish admission test vs verdict. NEXT: MST pre-test. MST PRE-TEST 2026-09-26: (1) 4-town road problem -> picked A-B,B-C,C-D = 7 CORRECT (drew arrows - reminded MST is undirected). (2) Why skip A-C(3)? -> 'already connected through A-B-C' = derived the redundant/cycle rule unprompted; also said 'cheaper overall' - clarified that is a by-product of cheapest-first order, not the test. (3) Which DSU method tests connectedness -> find(a)==find(b); tied to union() returning False. TAUGHT Kruskal: mental model + mnemonic + kruskal.html (10 steps, 2 Qs). Check-in: 'B-D joins the two separate groups; A-B was redundant' = CORRECT (bridge vs redundant). Did not report the embedded answers (again). NEXT: implement kruskal(n, edges) in graphs/mst.py as a plain function, import UnionFind (union_find.py has unguarded demo prints at module level). Test graph = visual (A..F -> 0..5), expect 13. Watch for early-exit at n-1 (visual Q2) and test-output-before-'done'. || 2026-10-06: INTERVIEW TOMORROW (10-07). Learner asked for a complete overview instead of Socratic flow; built revision page https://claude.ai/artifact/VmY3QNdqeuqwVm2Sstadnn (15 concepts incl. not-yet-taught bipartite, multi-source/0-1 BFS, Dijkstra, Bellman-Ford, Floyd-Warshall, SCC/bridges; tested templates; 70 hidden-answer Qs; mixed drill). Nothing graded this session. NEXT SESSION: debrief the interview, then teach the new-to-them topics properly (Dijkstra first).",
+  "session_recap": "Graphs: foundations + both traversals + traversal-pattern framework (06-27..29); grid flood-fill + push/pop mastery (07-02); LC 733 live debug + 200/695/547 + 4/5 quiz (07-04); cycle detection both variants implemented + directed/undirected framework built (07-05). 2026-07-17 return-after-break quiz = 1 clean, 1 partial, 3 miss->fixed: new anchors banked are U-TURN vs ROUNDABOUT (single undirected edge is not a cycle; directed A<->B is), e-NUM-erate NUMber-first + WHAT-for-WHERE-if comprehension order + diagonal self-loop, FIFO-keeps-the-wave-SORTED (monotone queue invariant), and pay-per-FRIEND vs pay-per-SEAT (list=degree, matrix=V). Recurring soft spot remains Python index-vs-value (3rd hit). 2026-07-18: DONE-status confusion resolved via 5-act visual (done-status-role.html); has_cycle_undirected refactored in 3 attempts (node-vs-nb slip -> dropped outer guard -> fixed) and stress-tested 9/9. RESUME AT: LC 207 Course Schedule (bridge to Topological Sort), then advance + regenerate roadmap. Drill the verification habit: test output before 'done'. 2026-09-26 DSU rebuild in mst.py: lazy->union by size (cold roster retest PASSED, sure) -> complexity (space-vs-storage misconception fixed) -> log n doubling teach-back (size!=height gap, then passed) -> path compression idea passed, while-loop infinite-loop bug (fix told). RESUME AT: confirm if-fix applied, then implement mst_kruskels."
+}

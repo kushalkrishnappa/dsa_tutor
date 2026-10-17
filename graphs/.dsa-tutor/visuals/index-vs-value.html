@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Index vs Value — the house number is not the porch light</title>
+<style>
+  body{margin:0;background:#15151f;color:#eee;font:15px/1.5 -apple-system,Segoe UI,Roboto,sans-serif}
+  .wrap{max-width:760px;margin:0 auto;padding:24px}
+  h1{font-size:20px;margin:0 0 4px}
+  .desc{color:#aaa;margin:0 0 16px}
+  #stage{background:#1d1d2a;border:1px solid #333;border-radius:10px}
+  svg{width:100%;height:auto;display:block}
+  .narration{min-height:48px;margin:12px 0;color:#cfcfe0}
+  .controls{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  button{background:#2b2b3a;color:#eee;border:1px solid #555;border-radius:6px;padding:6px 12px;cursor:pointer}
+  button:hover{border-color:#e0b341}
+  .counter{margin-left:auto;color:#888}
+  .quiz{margin-top:16px;background:#1d1d2a;border:1px solid #3a3a4a;border-radius:10px;padding:14px}
+  .quiz .q{font-weight:600;margin-bottom:8px}
+  .quiz button{margin:4px 6px 4px 0}
+  .reveal{margin-top:10px;color:#cfcfe0}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Index vs Value — the house number is not the porch light</h1>
+  <p class="desc">A row of an adjacency matrix is a street. The number inside a house is only its porch light. A neighbour is a <b>house number</b>.</p>
+  <div id="stage"><svg id="svg" viewBox="0 0 640 380"></svg></div>
+  <div class="narration" id="narration">&mdash;</div>
+  <div class="controls">
+    <button id="prev">&#9664; Prev</button>
+    <button id="play">&#9654; Play</button>
+    <button id="step">Step &#9654;|</button>
+    <button id="reset">&#10226; Reset</button>
+    <label>Speed <input id="speed" type="range" min="300" max="1600" value="1100"></label>
+    <span class="counter" id="counter"></span>
+  </div>
+  <div class="quiz" id="quiz" hidden>
+    <div class="q" id="qtext"></div>
+    <div id="qopts"></div>
+    <div class="reveal" id="reveal" hidden></div>
+  </div>
+</div>
+<script>
+/* ===== infrastructure ===== */
+const SVG="http://www.w3.org/2000/svg";
+const svg=document.getElementById('svg');
+function el(t,a){const e=document.createElementNS(SVG,t);for(const k in a)e.setAttribute(k,a[k]);return e;}
+function txt(x,y,s,fill,size,anchor,weight){const t=el('text',{x,y,fill:fill||'#fff','font-size':size||13,'text-anchor':anchor||'middle','font-weight':weight||'400'});t.textContent=s;svg.appendChild(t);return t;}
+function clear(){while(svg.firstChild)svg.removeChild(svg.firstChild);}
+
+const ROW=[1,0,1,1,0], I=2;
+const BW=64,BH=52,GAP=10,X0=140,Y0=150;
+const LIT='#3fb950', OFF='#2b2b3a', READ='#f85149', COLLECT='#e0b341', NUM='#7dd3fc';
+function cx(j){return X0+j*(BW+GAP)+BW/2;}
+
+/* state: {loopName, loopVal, srcCell, readCell, verdict, collected, mode, dropCell} */
+function drawStreet(s){
+  clear();
+  txt(320,26,'M['+I+']  =  [ 1, 0, 1, 1, 0 ]        i = '+I,'#cfcfe0',14,'middle','700');
+  txt(60,Y0+BH/2+5,'M['+I+']','#9aa0b4',13,'middle');
+
+  // "house number" legend
+  txt(320,74,'house numbers (indices)  ─  what a neighbour IS','#7dd3fc',11);
+  txt(320,346,'porch lights (values)  ─  only on / off, NEVER an address','#9aa0b4',11);
+
+  ROW.forEach((v,j)=>{
+    const x=X0+j*(BW+GAP);
+    const isRead = s.readCell===j;
+    const isSrc  = s.srcCell===j;
+    const isDrop = s.dropCell===j;
+    const collected = (s.collected||[]).includes(j);
+    let fill = v===1?'rgba(63,185,80,0.22)':OFF;
+    let stroke = v===1?LIT:'#555', sw=2;
+    if(collected){fill='rgba(224,179,65,0.28)';stroke=COLLECT;sw=3;}
+    if(isDrop){fill='rgba(248,81,73,0.18)';stroke=READ;sw=3;}
+    if(isRead){fill='rgba(248,81,73,0.30)';stroke=READ;sw=3;}
+    svg.appendChild(el('rect',{x,y:Y0,width:BW,height:BH,rx:8,fill,stroke,'stroke-width':sw}));
+    // house number above (the mailbox)
+    txt(x+BW/2,Y0-14,String(j),isRead||collected||isDrop?'#fff':NUM,16,'middle','700');
+    // porch light inside
+    txt(x+BW/2,Y0+BH/2+7,String(v),v===1?LIT:'#6b7280',20,'middle','700');
+    if(j===I) txt(x+BW/2,Y0+BH+18,'▲ i','#a855f7',11);
+    if(isSrc) txt(x+BW/2,Y0+BH+34,'value taken from here','#9aa0b4',10);
+  });
+
+  // loop variable badge
+  if(s.loopName){
+    svg.appendChild(el('rect',{x:250,y:112,width:140,height:26,rx:6,fill:'rgba(43,43,58,0.9)',stroke:'#777'}));
+    txt(320,130,s.loopName+' = '+s.loopVal,'#fff',13,'middle','700');
+  }
+
+  // read arrow: from the loop-variable badge down to the cell it indexes
+  if(s.readCell!=null && s.mode==='broken'){
+    const tx=cx(s.readCell);
+    svg.appendChild(el('path',{d:'M320 140 V'+(Y0-34)+' H'+tx+' V'+(Y0-30),fill:'none',stroke:READ,'stroke-width':2,'stroke-dasharray':'5,4'}));
+    txt(tx,Y0-40,'M['+I+']['+s.loopVal+'] → house '+s.readCell,READ,11);
+  }
+
+  // verdict line
+  if(s.verdict) txt(320,Y0+BH+62,s.verdict,s.verdictColor||'#cfcfe0',13,'middle','700');
+
+  // collected list
+  const shown=(s.collected||[]);
+  txt(320,Y0+BH+92,'collected  →  ['+shown.join(', ')+']',COLLECT,15,'middle','700');
+}
+
+const narration=document.getElementById('narration'),counter=document.getElementById('counter');
+const quiz=document.getElementById('quiz'),qtext=document.getElementById('qtext'),qopts=document.getElementById('qopts'),reveal=document.getElementById('reveal');
+const playBtn=document.getElementById('play'),speed=document.getElementById('speed');
+let STEPS=[],idx=0,timer=null;
+function render(){const s=STEPS[idx];s.draw();narration.textContent=s.note||'';counter.textContent=(idx+1)+' / '+STEPS.length;
+  if(s.question)showQuestion(s.question);else quiz.hidden=true;}
+function showQuestion(q){quiz.hidden=false;qtext.textContent=q.prompt;reveal.hidden=true;qopts.innerHTML='';
+  q.options.forEach((o,i)=>{const b=document.createElement('button');b.textContent=o;
+    b.onclick=()=>{reveal.hidden=false;reveal.textContent=(i===q.answer?'✓ Correct. ':'✗ Not quite. ')+q.explain;};qopts.appendChild(b);});}
+function step(){if(idx<STEPS.length-1){idx++;render();}else pause();}
+function prev(){if(idx>0){idx--;render();}}
+function pause(){clearInterval(timer);timer=null;playBtn.textContent='▶ Play';}
+function play(){if(timer){pause();return;}playBtn.textContent='⏸ Pause';timer=setInterval(()=>{if(idx>=STEPS.length-1){pause();return;}step();},+speed.value);}
+function reset(){pause();idx=0;render();}
+document.getElementById('prev').onclick=prev;
+document.getElementById('step').onclick=()=>{pause();step();};
+document.getElementById('reset').onclick=reset;
+playBtn.onclick=play;
+
+/* ===== the lesson ===== */
+function buildSteps(){
+  const steps=[];
+  const S=o=>({loopName:null,loopVal:null,srcCell:null,readCell:null,dropCell:null,verdict:null,collected:[],mode:null,...o});
+
+  // ACT 0 - the street
+  steps.push({draw:()=>drawStreet(S({})),
+    note:"ACT 1 — The street. Row M[2] of a 5-node adjacency matrix: five houses numbered 0..4 (blue, above). Inside each house is only its PORCH LIGHT: on (1) or off (0). The true neighbours of node 2 are the house NUMBERS whose light is on, minus the diagonal. Read them off yourself before pressing Step."});
+
+  // ACT 1 - the broken loop
+  const broken=[
+    {src:0,val:1,read:1,ok:false,note:"ACT 2 — Your line: [nb for nb in M[2] if M[2][nb] == 1]. Iteration 1: `for nb in M[2]` hands you the CONTENTS of house 0, so nb = 1. Not the house number — the porch light."},
+    {src:1,val:0,read:0,ok:true, note:"Iteration 2: house 1's light is 0, so nb = 0. M[2][0] = 1 → the filter passes and it appends nb, which is 0. It 'found' node 0 — but only by accident, via a light state that happened to be a legal index."},
+    {src:2,val:1,read:1,ok:false,note:"Iteration 3: house 2's light is 1, so nb = 1 again. It reads house 1 again. House 2 — the house it is actually standing in front of — is never looked at."},
+    {src:3,val:1,read:1,ok:false,note:"Iteration 4: house 3's light is 1, so nb = 1 again → reads house 1 again → rejected. Node 3 is a REAL neighbour and it has just been silently thrown away."},
+    {src:4,val:0,read:0,ok:true, note:"Iteration 5: house 4's light is 0, so nb = 0 → M[2][0] = 1 → appends 0 a SECOND time."}
+  ];
+  let coll=[];
+  broken.forEach((b,k)=>{
+    const before=coll.slice();
+    if(b.ok) coll=coll.concat([b.val]);
+    const after=coll.slice();
+    let question=null;
+    if(k===0) question={prompt:"nb was just handed the value 1 (taken out of house 0). Which house does M[2][nb] look at?",
+      options:["House 0 — where the value came from","House 1 — because nb is literally the number 1","House 3 — the next lit house"],answer:1,
+      explain:"nb is the VALUE 1, and M[2][1] indexes by that number — so it reads house 1, which has nothing to do with house 0 where the value came from. The loop has already lost track of where it is standing."};
+    steps.push({draw:()=>drawStreet(S({loopName:'nb',loopVal:b.val,srcCell:b.src,readCell:b.read,mode:'broken',
+      collected:after,
+      verdict:'M['+I+']['+b.val+'] = '+ROW[b.read]+(b.ok?'  →  passes, appends '+b.val:'  →  rejected'),
+      verdictColor:b.ok?COLLECT:READ})),note:b.note,question});
+  });
+  steps.push({draw:()=>drawStreet(S({collected:coll,mode:'broken',
+      verdict:'result  =  [0, 0]      truth  =  [0, 3]',verdictColor:READ})),
+    note:"Result [0, 0]: node 0 duplicated, real neighbour 3 gone, and houses 2, 3 and 4 were never examined even once. THE SMELL: in a 5-node graph legal house numbers are 0..4, but nb could only ever be 0 or 1. If the thing you index with can only be 0 or 1, you are using a light switch as an address."});
+
+  // ACT 2 - enumerate
+  const enumSteps=[
+    {j:0,keep:true, note:"ACT 3 — [j for j, val in enumerate(M[i]) if val == 1 and j != i]. enumerate hands you a PAIR: (house number, porch light) — e-NUM-erate, the NUMber comes first. j = 0, val = 1: light on, and j != i, so keep house 0."},
+    {j:1,keep:false,note:"j = 1, val = 0: porch light off — no edge. Skip. Notice j is now walking the house NUMBERS 0,1,2,3,4 — every house gets looked at exactly once."},
+    {j:2,keep:false,drop:true,note:"j = 2, val = 1 — light on. But j == i == 2: this is the DIAGONAL cell M[i][i], node 2 staring at its own reflection. A self-loop, not a neighbour. `and j != i` drops it."},
+    {j:3,keep:true, note:"j = 3, val = 1, j != i → keep house 3. This is the neighbour your broken line threw away."},
+    {j:4,keep:false,note:"j = 4, val = 0 → skip. Street fully walked."}
+  ];
+  let coll2=[];
+  enumSteps.forEach((e,k)=>{
+    if(e.keep) coll2=coll2.concat([e.j]);
+    const after=coll2.slice();
+    let question=null;
+    if(k===2) question={prompt:"j = 2, val = 1 (light is ON), and i = 2. Do you include house 2 as a neighbour?",
+      options:["Yes — the porch light is on, that is an edge","No — j == i is the DIAGONAL M[i][i]: node 2 pointing at itself, a self-loop","No — house 2 was already covered earlier"],answer:1,
+      explain:"The self-loop always lives on the diagonal M[i][i] — the node staring at its own reflection. That is exactly the job of `and j != i`. Note it is the cell where j equals i, NOT some other position."};
+    steps.push({draw:()=>drawStreet(S({loopName:'j, val',loopVal:e.j+', '+ROW[e.j],srcCell:e.j,dropCell:e.drop?e.j:null,
+      collected:after,
+      verdict:e.drop?'j == i → diagonal self-loop, dropped':(e.keep?'val == 1 and j != i  →  keep house '+e.j:'val == 0  →  skip'),
+      verdictColor:e.drop?READ:(e.keep?COLLECT:'#9aa0b4')})),note:e.note,question});
+  });
+  steps.push({draw:()=>drawStreet(S({collected:coll2,verdict:'neighbours of node 2  =  [0, 3]',verdictColor:LIT})),
+    note:"[j for j, val in enumerate(M[i]) if val == 1 and j != i]  →  [0, 3]. Two rules to carry out of here: (1) `for x in lst` hands you CONTENTS, never positions — a porch light is not an address; (2) enumerate hands you (NUMber, value), number FIRST. Order of a comprehension: [WHAT for VAR in WHERE if CONDITION]."});
+  return steps;
+}
+STEPS=buildSteps();render();
+</script>
+</body>
+</html>

@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="utf-8"><title>Sliding Window roadmap</title>
+<style>body{margin:0;background:#15151f;color:#eee;font:15px/1.5 -apple-system,Segoe UI,Roboto,sans-serif}
+.wrap{max-width:1140px;margin:0 auto;padding:20px}h1{font-size:20px}.legend{color:#bbb;font-size:13px}
+svg{width:100%;height:auto}</style></head>
+<body><div class="wrap">
+<h1>Sliding Window — learning roadmap</h1>
+<p class="legend">✓ Green = done · Gold = current · Amber ◐ = started, unfinished · Solid → prerequisite · Dashed ⇢ next phase · Dashed box = stretch &nbsp;|&nbsp; updated 2026-08-20</p>
+<svg id="map" viewBox="0 0 980 570"></svg>
+</div>
+<script>
+const NS="http://www.w3.org/2000/svg",svg=document.getElementById('map'),W=200,H=54;
+const C={current:'#e0b341',done:'#2ea043',inprog:'#f59e0b',
+         found:'#3b82f6',core:'#3fb950',app:'#14b8a6',adv:'#9ca3af'};
+const B={
+  invariant:{x:460,y:24, phase:'done',   label:'✓ Window Invariant',        sub:'two-pointer mental model'},
+  fixed:    {x:460,y:106,phase:'done',   label:'✓ Fixed-Size Window',       sub:'window of size k, add/drop template'},
+  varshrink:{x:460,y:188,phase:'current',label:'▶ Variable Window (shrink)', sub:'YOU ARE HERE · grow right, shrink left on violation'},
+  atmost:   {x:200,y:280,phase:'core',   label:'"At Most K" Trick',        sub:'longest window, never shrinks past valid'},
+  freqmap:  {x:720,y:280,phase:'core',   label:'Window + Frequency Map',   sub:'anagram / min-window substring'},
+  exactlyk: {x:200,y:372,phase:'app',    label:'Exactly-K Subarrays',      sub:'atMost(K) − atMost(K−1)'},
+  deque:    {x:720,y:372,phase:'app',    label:'Monotonic Deque Max/Min',  sub:'O(1) window max via deque'},
+  binarysearch:{x:200,y:464,phase:'adv', label:'Window + Binary Search',   sub:'stretch · search on window size/answer'},
+  nested:   {x:720,y:464,phase:'adv',    label:'Nested / Multiple Windows',sub:'stretch · two windows at once'}
+};
+const L=[
+  ['invariant','fixed','p'],
+  ['fixed','varshrink','n'],
+  ['varshrink','atmost','p'],
+  ['varshrink','freqmap','p'],
+  ['atmost','exactlyk','n'],
+  ['freqmap','deque','n'],
+  ['exactlyk','binarysearch','n'],
+  ['deque','nested','n']
+];
+const labels=[['FOUNDATIONS','found',92],['CORE','core',215],['APPLICATIONS','app',353],['STRETCH','adv',491]];
+
+const defs=document.createElementNS(NS,'defs');
+defs.innerHTML='<marker id="as" markerWidth="9" markerHeight="9" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="#8b8b9e"/></marker>'+
+'<marker id="an" markerWidth="9" markerHeight="9" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="#a7adc4"/></marker>';
+svg.appendChild(defs);
+function geo(n){return {cx:n.x+W/2,cy:n.y+H/2,top:n.y,bottom:n.y+H,left:n.x,right:n.x+W};}
+function pathFor(s,t){const a=geo(s),b=geo(t);
+  if(Math.abs(s.y-t.y)<1)return t.x>s.x?`M${a.right} ${a.cy} H${b.left}`:`M${a.left} ${a.cy} H${b.right}`;
+  const my=(a.bottom+b.top)/2;return `M${a.cx} ${a.bottom} V${my} H${b.cx} V${b.top}`;}
+L.forEach(([s,t,ty])=>{const p=document.createElementNS(NS,'path');p.setAttribute('d',pathFor(B[s],B[t]));
+  p.setAttribute('fill','none');p.setAttribute('stroke',ty==='n'?'#a7adc4':'#8b8b9e');
+  p.setAttribute('stroke-width',ty==='n'?'1.6':'2');if(ty==='n')p.setAttribute('stroke-dasharray','6,5');
+  p.setAttribute('marker-end',ty==='n'?'url(#an)':'url(#as)');svg.appendChild(p);});
+labels.forEach(([txt,ph,cy])=>{const t=document.createElementNS(NS,'text');t.setAttribute('x',26);t.setAttribute('y',cy);
+  t.setAttribute('fill',C[ph]);t.setAttribute('font-size','11');t.setAttribute('font-weight','700');
+  t.setAttribute('letter-spacing','1.5');t.setAttribute('text-anchor','middle');
+  t.setAttribute('transform',`rotate(-90,26,${cy})`);t.textContent=txt;svg.appendChild(t);});
+Object.values(B).forEach(n=>{const col=C[n.phase],cur=n.phase==='current',adv=n.phase==='adv';
+  const r=document.createElementNS(NS,'rect');r.setAttribute('x',n.x);r.setAttribute('y',n.y);
+  r.setAttribute('width',W);r.setAttribute('height',H);r.setAttribute('rx','9');
+  r.setAttribute('fill',cur?'rgba(224,179,65,0.16)':(n.phase==='inprog'?'rgba(245,158,11,0.10)':'rgba(38,38,52,0.92)'));
+  r.setAttribute('stroke',col);r.setAttribute('stroke-width',cur?'3':'2');
+  if(adv)r.setAttribute('stroke-dasharray','6,4');svg.appendChild(r);
+  const t1=document.createElementNS(NS,'text');t1.setAttribute('x',n.x+14);t1.setAttribute('y',n.y+23);
+  t1.setAttribute('fill','#fff');t1.setAttribute('font-size','14');t1.setAttribute('font-weight','700');t1.textContent=n.label;svg.appendChild(t1);
+  const t2=document.createElementNS(NS,'text');t2.setAttribute('x',n.x+14);t2.setAttribute('y',n.y+41);
+  t2.setAttribute('fill','#b8b8c8');t2.setAttribute('font-size','10.5');t2.textContent=n.sub;svg.appendChild(t2);});
+</script>
+</body>
+</html>
