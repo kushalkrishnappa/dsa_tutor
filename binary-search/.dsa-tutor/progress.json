@@ -1,0 +1,212 @@
+{
+  "area": "binary-search",
+  "last_session_date": "2026-10-01",
+  "roadmap": ".dsa-tutor/roadmap.html",
+  "current": "Search a 2D Matrix",
+  "topics": [
+    {
+      "name": "Classic Binary Search",
+      "status": "done"
+    },
+    {
+      "name": "Loop Invariants & Boundaries",
+      "status": "done"
+    },
+    {
+      "name": "Lower / Upper Bound",
+      "status": "done"
+    },
+    {
+      "name": "Rotated Sorted Array",
+      "status": "done"
+    },
+    {
+      "name": "Search a 2D Matrix",
+      "status": "in-progress"
+    },
+    {
+      "name": "Peak Finding",
+      "status": "not-started"
+    },
+    {
+      "name": "Binary Search on the Answer",
+      "status": "not-started"
+    },
+    {
+      "name": "Median of Two Sorted Arrays",
+      "status": "not-started"
+    },
+    {
+      "name": "K-th Smallest in Sorted Matrix",
+      "status": "not-started"
+    }
+  ],
+  "concepts": [
+    {
+      "name": "Classic Binary Search",
+      "mental_model": "Number line: the closed interval [lo, hi] holds every index the target could be at (invariant). Check mid, then write the new interval without mid.",
+      "mnemonic": "[lo, hi] both included \u2192 while lo <= hi (size hi-lo+1 > 0). Too small \u2192 [mid+1, hi]. Too big \u2192 [lo, mid-1]. Empty \u2192 not found; lo = insert position.",
+      "mastery": "learning",
+      "last_reviewed": "2026-09-30",
+      "review_interval": 3,
+      "aces": 1,
+      "past_mistakes": [
+        {
+          "note": "Wrote mid as `lo + hi // 2` \u2014 operator precedence makes it lo + (hi//2); must be (lo + hi) // 2 (or lo + (hi - lo) // 2).",
+          "high_confidence": false
+        }
+      ],
+      "visual": [
+        ".dsa-tutor/visuals/classic-binary-search.html"
+      ],
+      "practice_done": [
+        "LC-704",
+        "LC-374"
+      ],
+      "calibration": {
+        "confident_right": 1,
+        "confident_wrong": 0,
+        "unsure_right": 0,
+        "unsure_wrong": 0
+      },
+      "taught_back": "2026-09-30"
+    },
+    {
+      "name": "Loop Invariants & Boundaries",
+      "mental_model": "Number line intervals. Closed [lo, hi]: size hi-lo+1, empty when lo > hi. Half-open [lo, hi): size hi-lo, empty when lo == hi. Floor mid satisfies lo <= mid < hi.",
+      "mnemonic": "Same brackets in, same brackets out: write the new interval with the SAME bracket types, excluding mid, then read the pointer off it. [lo,hi) too big \u2192 [lo, mid) \u2192 hi = mid; too small \u2192 [mid+1, hi) \u2192 lo = mid+1.",
+      "mastery": "learning",
+      "last_reviewed": "2026-09-30",
+      "review_interval": 3,
+      "aces": 1,
+      "past_mistakes": [
+        {
+          "note": "Said lo = mid 'skips the target at the last index'. Actually it never skips \u2014 it freezes: floor mid can equal lo, so lo = mid doesn't move \u2192 infinite loop (e.g. half-open [1,3], target 5). Second time attributing the lo=mid bug to 'skipping the end' (also pre-test Q3).",
+          "high_confidence": false
+        },
+        {
+          "note": "Teach-back: said half-open 'keeps mid' with hi = mid. In [lo, mid) mid is EXCLUDED \u2014 hi = mid is how you write 'drop mid' when hi is exclusive. Also called half-open 'the lower bound version' (conflated a boundary convention with a problem).",
+          "high_confidence": false
+        }
+      ],
+      "visual": [
+        ".dsa-tutor/visuals/half-open-binary-search.html"
+      ],
+      "practice_done": [],
+      "calibration": {
+        "confident_right": 1,
+        "confident_wrong": 0,
+        "unsure_right": 0,
+        "unsure_wrong": 1
+      },
+      "taught_back": "2026-09-30"
+    },
+    {
+      "name": "Lower / Upper Bound",
+      "mental_model": "Sorted array \u2192 predicate is False\u2026False True\u2026True. Binary search finds the first True. lower bound: arr[i] >= t; upper bound: arr[i] > t. Answer lies in [0, n]; never -1.",
+      "mnemonic": "Bounds never return -1 \u2014 answer is in [0, n]. >= \u2192 lower (bisect_left), > \u2192 upper (bisect_right). Count of t = upper - lower. Exact search = lower bound + check arr[lo] == t (guard lo < n).",
+      "mastery": "learning",
+      "last_reviewed": "2026-09-30",
+      "review_interval": 3,
+      "aces": 2,
+      "past_mistakes": [
+        {
+          "note": "Copied exact-search asserts expecting -1 onto bound functions; bounds return a position in [0, n], never -1.",
+          "high_confidence": false
+        },
+        {
+          "note": "LC-278: lo = 0 when versions are 1..n \u2192 may call isBadVersion(0) (invalid input). Recurring (same as LC-374): set the search interval from the problem's valid domain, here [1, n).",
+          "high_confidence": false
+        },
+        {
+          "note": "Asked why it's SAFE to never test n in LC-278 [1, n): answered why it's necessary (API error / out of range) instead of why it's correct. Missing idea: answer space is [lo, hi] \u2014 hi is the fallback answer; if all of [1, n) are good, n wins by elimination (guaranteed bad).",
+          "high_confidence": false
+        },
+        {
+          "note": "What-if LC-278 with no guaranteed bad version: said 'turn it into classic exact search'. Classic == search finds ANY match, not the FIRST True, and a predicate has no == to stop on. Fix is bound + verify: widen to [1, n+1) (n+1 = none) or check isBadVersion(lo) after the loop \u2014 same pattern as their half-open exact search.",
+          "high_confidence": false
+        },
+        {
+          "note": "Teach-back: said exact search needs hi = n + 1 'to check the nth element'. Mixed 1-indexed domain (LC-278 versions 1..n \u2192 [1, n+1)) with 0-indexed arrays ([0, n) already includes index n-1; n is the 'none' sentinel). Exact search = lower_bound on [0, n) + check lo < n and arr[lo] == t.",
+          "high_confidence": false
+        }
+      ],
+      "visual": [],
+      "practice_done": [
+        "LC-35",
+        "LC-34",
+        "LC-744",
+        "LC-278"
+      ],
+      "calibration": {
+        "confident_right": 1,
+        "confident_wrong": 0,
+        "unsure_right": 0,
+        "unsure_wrong": 1
+      },
+      "taught_back": "2026-09-30"
+    },
+    {
+      "name": "Rotated Sorted Array",
+      "mental_model": "One break \u2192 at least one side of mid is sorted. A sorted side covers one contiguous value range on the number line; target is there iff it lies in that range.",
+      "mnemonic": "Match? \u2192 Which side sorted (arr[lo] <= arr[mid])? \u2192 Target inside its range (both ends)? yes \u2192 go there, no \u2192 go the other way.",
+      "mastery": "learning",
+      "last_reviewed": "2026-10-01",
+      "review_interval": 3,
+      "aces": 1,
+      "past_mistakes": [
+        {
+          "note": "Why arr[lo] <= arr[mid] (not <): said '< returns false and skips the check' \u2014 vague. Precisely: with mid == lo, '<' wrongly declares the RIGHT side sorted and range-checks an unsorted side \u2192 goes the wrong way. [3,1], target 1 \u2192 returns -1.",
+          "high_confidence": false
+        },
+        {
+          "note": "Two-phase LC-33: pivot loop went back to moving reference nums[lo] (minutes after fixing it in LC-153 with nums[0]) and flipped the branch (>= -> hi=mid) -> pivot always 0. Phase 2 bugs: sliced nums[lo:hi] after loop when hi==lo (empty), slice-relative idx not offset by p, nums[idx] unguarded (idx can be len), `lo > len` never true. Fix: fixed ref nums[0], bisect_left(nums, t, lo, hi) for absolute index without copying, pick side by target >= nums[0].",
+          "high_confidence": false
+        },
+        {
+          "note": "Teach-back: called pivot 'where the first element of the array lies' \u2014 pivot is the index of the MINIMUM (first i with nums[i] < nums[0]). Also blended the two approaches' comparisons: pivot approach compares to fixed nums[0]; one-pass compares to moving arr[lo] (with <=).",
+          "high_confidence": false
+        }
+      ],
+      "visual": [
+        ".dsa-tutor/visuals/rotated-sorted-array.html"
+      ],
+      "practice_done": [
+        "LC-33",
+        "LC-153",
+        "LC-81",
+        "LC-154"
+      ],
+      "calibration": {
+        "confident_right": 0,
+        "confident_wrong": 0,
+        "unsure_right": 0,
+        "unsure_wrong": 0
+      },
+      "taught_back": "2026-10-01"
+    },
+    {
+      "name": "Search a 2D Matrix",
+      "mental_model": "LC 74 matrix = one sorted number line folded into rows of width COLS. Search flat index [0, ROWS*COLS - 1]; fold back only to read a value.",
+      "mnemonic": "Divide by the WIDTH: r, c = divmod(i, COLS). i // COLS = full rows before i; i % COLS = steps into the row. ROWS only sets hi.",
+      "mastery": "learning",
+      "last_reviewed": "2026-10-01",
+      "review_interval": 1,
+      "aces": 0,
+      "past_mistakes": [],
+      "visual": [
+        ".dsa-tutor/visuals/search-2d-matrix.html"
+      ],
+      "practice_done": [],
+      "calibration": {
+        "confident_right": 0,
+        "confident_wrong": 0,
+        "unsure_right": 0,
+        "unsure_wrong": 0
+      },
+      "taught_back": null
+    }
+  ],
+  "notes": "Day 1. Pre-test Q1: halving strategy correct unprompted; estimated ~6 steps for 1M (log10 instinct, not log2 -> actual ~20). Reinforce 2^10\u22481000 anchor when teaching complexity. Pre-test Q2: knew lo>hi crossing = not found; guessed final lo=0,hi=-1 (imagined pointers drifting to one end) \u2014 actual lo=2,hi=1; lo = insertion point. Teach the trace + 'lo lands on insert position' (primes Lower Bound). Pre-test Q3: correctly predicted lo=mid infinite loop, but attributed it to 'target at end' \u2014 real trigger is a 2-element room with floor mid landing on lo. Teach-back 2026-09-30: solid on +1/-1 reason and <= reason. Gaps: mid precedence (lo + hi // 2), wrote 'lo <= mid' for loop condition (likely slip), omitted the invariant (target in [lo,hi] if present), omitted sorted-array precondition, omitted lo = insertion point on failure. Implementation binary-search/binary_search.py reviewed 2026-09-30: correct, uses overflow-safe mid, 9 edge-case asserts pass. Missing: target-at-index-0 in multi-element array. Recommended practice: LC-704, LC-374, LC-69 (stretch: uses final hi), HR 'Hash Tables: Ice Cream Parlor' (binary-search variant), dsapanicle logn-and-sort page (verified reachable). LC-704 & LC-374 solved 2026-09-30 (correct). 374 idioms flagged: calls guess(mid) twice per iteration (cache API result); lo=0 instead of 1 (room wider than valid range \u2014 harmless here but loosens invariant). Invariants pre-test Q1: correctly chose hi = mid in half-open [lo,hi) and justified it as 'keep hi meaning one-past/excluded' \u2014 already reasons in invariants. Invariants pre-test Q2: unsure; thought hi = mid - 1 would still work in half-open (it skips mid-1: [1,3] target 1 returns -1). 2026-09-30: learner rejected room/door/wall analogy \u2014 prefers plain number-line / interval notation. Visuals reworded to interval language. Traced half-open [4,8] target 1 correctly; identified exit lo as insertion point (confident, correct). Invariants teach-back 2026-09-30: solid on closed mid-1 and lo=mid freeze. Gaps: hi described as 'last element of the array' (it's last candidate of current interval); thinks hi = mid keeps mid; conflates half-open with lower bound. Re-ask (old mid ever picked again?): right conclusion, wrong justification \u2014 argued 'interval shrinks' (shrinking != excluding mid) and said 'hi = mid or mid - 1' interchangeably. Correct proof: hi only decreases, future mid < hi <= old_mid. Revisit next session. Asked 'why half-open at all?' \u2014 good motivation question. Answered: for exact match it adds nothing; it pays off for boundary problems (answer can be n, mid may be the answer, single exit point lo==hi, matches range/slices/bisect). Acknowledged their teach-back intuition ('hi = mid keeps the boundary') is the correct lower-bound view. Swapped implementation task from half-open exact search to half-open lower_bound. Learner reframed on their own: binary search as boundary questions \u2014 lower bound (first arr[i] >= t, bisect_left) vs upper bound (first arr[i] > t, bisect_right). Refined to 'first index where predicate flips False\u2192True'. Learner chose to implement: half-open exact search \u2192 lower_bound \u2192 upper_bound, in binary_search.py. 2026-09-30 impl review: binary_search_half_open (built as lower_bound + arr[lo]==target check, with lo<len guard), lower_bound, higher_bound all correct \u2014 fuzzed 20k cases vs bisect. Gap: bound functions have only 1 assert each; copied exact-search asserts commented out because they expected -1 (bounds never return -1). Index-0 case still untested. Fixed bound asserts (all pass); explained lower_bound([1,3],4)=2 correctly as 'n, where anything >= 4 would go'. Invariants marked done; Lower/Upper Bound now current (implemented, needs practice + teach-back). Recommended: LC-35, LC-34, LC-744, LC-278. Solved LC-35, LC-34 (manual + bisect), LC-744 (manual + bisect), LC-278 \u2014 all correct. 34/744 also redone with bisect_left/right. Recurring idiom: starting lo at 0 when the domain starts at 1. Bounds teach-back 2026-09-30: lower bound right (exists-or-insert position) but omitted 'FIRST occurrence'; upper bound phrased loosely ('where every element is greater'); 'hi as answer' only covered target>all, not guaranteed-predicate case; confused n+1 (1-indexed domain) with array exact search; did not use False\u2192True framing. Re-ask (0-indexed versions, no guarantee \u2192 [0, n), n = none): correct, confident. Bounds marked done; starting Rotated Sorted Array. Rotated pre-test: Q1 found sorted side by eye, then proposed peak check (arr[mid-1]<arr[mid]>arr[mid+1]) \u2014 only works when mid is at the break. Q2 used one-end range test (arr[lo] vs target) \u2014 fails on [2,3,4,5,6,7,0,1] target 7. Rotated <= question: partially right (knew '<' flips the branch), couldn't state the concrete failure. LC-33 solved (fuzz-verified 20k). rotated_sorted_array.py is still an empty stub (IndentationError). Recommended next: LC-153, LC-81, LC-154. 2026-10-01: learner proposed two-phase rotated search (pivot via bound search, then bisect_left on [0,p) and [p,n)). Warm-up (ungraded): pivot predicate given as arr[mid] >= arr[lo] -> lo=mid+1 else hi=mid. Bug: reference arr[lo] moves with lo, so predicate isn't fixed/monotone; once lo lands on the pivot the right run 'looks sorted' and lo walks past it ([4,5,6,7,0,1,2] -> returns 7, not 4). Teaching: compare against a FIXED element (arr[0] or arr[-1]). After scaffolding (value-vs-arr[0] T/F row), found predicate arr[i] < arr[0] gives FFFFTTT; first True = pivot. Was unsure before the scaffold. LC-153 solved with half-open pivot search on fixed predicate (nums[mid] >= nums[0] -> lo=mid+1 else hi=mid), guards lo==n for unrotated -> nums[0]. Fuzz-verified 20k. Idiom: `condition = ...; if not condition` double-negation; writing `if nums[mid] < nums[0]: hi = mid` reads as the predicate directly. Learner asked for the solution after the review; given find_pivot + lower_bound(lo,hi) + search_rotated (fuzz-verified 20k) plus LC bisect variant. Not yet re-typed by learner -> next session: have them rewrite search_rotated from memory and explain why p is never 0. 2026-10-01: solved LC-153, LC-81 (two ways), LC-154, LC-33 second way \u2014 all fuzz-verified 30k cases. Independently invented pivot = first index with nums[i] < nums[0] (first-True) + bounded lower_bound on the correct segment; for dups, trimmed tail equal to nums[0] to restore monotone predicate. Nits: duplicate `search` defs in one class (only last one runs on LC); `not x >= y` \u2192 `x < y`. Rotated teach-back 2026-10-01: explained pivot+bisect approach well (two sorted segments, pick by target, bisect_left, dup trimming, O(n) worst/O(log n) best). Gaps: pivot definition imprecise; 'mid greater than first' (should be >=, and arr[lo] in one-pass); didn't explain WHY one side is always sorted; both-ends reason vague; didn't say trimming restores the monotone predicate. Why one side sorted: correct 3-case analysis (mid at min / right of min / left of min). Nuance fixed: when mid IS the min, [lo..mid] contains the break (only [mid..hi] sorted) unless lo == mid. Rotated marked done. 2D pre-test Q1: value + (1,2) correct; formula col = i // ROWS (coincidence at i=6) \u2014 should be i % COLS; i=7 breaks it. 2D pre-test Q2: correctly said row-flatten breaks monotonicity for LC-240-type matrix; proposed column-flatten \u2014 works for the example only by coincidence (columns happen to chain); fails on [[1,4],[5,6]] \u2192 1,5,4,6. Column-major formula given as (i%COLS, i//COLS) \u2014 should be (i % ROWS, i // ROWS).",
+  "session_recap": "2026-09-30 (day 1): Classic BS (done) \u2014 interval invariant, exclude mid, <= for size-1, sorted precondition; LC-704/374 solved. Invariants (done) \u2014 closed vs half-open in number-line terms, 'same brackets in, same brackets out', lo<=mid<hi explains lo=mid freeze. Learner reframed BS as first-True boundary search and implemented half-open exact, lower_bound, upper_bound (fuzz-verified). Next: practice LC-35/34/744/278, teach-back on bounds, then Rotated Sorted Array. Revisit: 'why old mid never re-picked' proof; lo=mid 'freezes not skips'. End of session: LC-35/34/744/278 solved. Open gaps for next session (surface first): (1) hi is a fallback answer \u2014 answer space [lo, hi] though search is [lo, hi); (2) no-guarantee case \u2192 bound + verify, NOT classic search; (3) recurring lo=0 when domain starts at 1. Start next session with bounds teach-back. Post-wrap: learner rewrote LC-278 as [1, n+1) with lo = 1 \u2014 correct for both guaranteed and no-guarantee cases (n+1 = none sentinel; never calls isBadVersion(n+1) since mid < hi). lo-from-domain habit applied correctly this time."
+}

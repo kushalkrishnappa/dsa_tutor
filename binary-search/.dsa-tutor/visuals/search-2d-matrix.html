@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Search a 2D Matrix</title>
+<style>
+  body{margin:0;background:#15151f;color:#eee;font:15px/1.5 -apple-system,Segoe UI,Roboto,sans-serif}
+  .wrap{max-width:760px;margin:0 auto;padding:24px}
+  h1{font-size:20px;margin:0 0 4px}
+  .desc{color:#aaa;margin:0 0 16px}
+  #stage{background:#1d1d2a;border:1px solid #333;border-radius:10px}
+  svg{width:100%;height:auto;display:block}
+  .narration{min-height:24px;margin:12px 0;color:#cfcfe0}
+  .controls{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  button{background:#2b2b3a;color:#eee;border:1px solid #555;border-radius:6px;padding:6px 12px;cursor:pointer}
+  button:hover{border-color:#e0b341}
+  .counter{margin-left:auto;color:#888}
+  .quiz{margin-top:16px;background:#1d1d2a;border:1px solid #3a3a4a;border-radius:10px;padding:14px}
+  .quiz .q{font-weight:600;margin-bottom:8px}
+  .quiz button{margin:4px 6px 4px 0}
+  .reveal{margin-top:10px;color:#cfcfe0}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Search a 2D Matrix (LC 74)</h1>
+  <p class="desc">Row-chained sorted matrix = one sorted number line folded into rows. Binary search the flat index; convert with r, c = divmod(i, COLS) only to read a value. Top: the matrix. Bottom: the same values as a line.</p>
+  <div id="stage"><svg id="svg" viewBox="0 0 640 360"></svg></div>
+  <div class="narration" id="narration">—</div>
+  <div class="controls">
+    <button id="prev">◀ Prev</button>
+    <button id="play">▶ Play</button>
+    <button id="step">Step ▶|</button>
+    <button id="reset">⟲ Reset</button>
+    <label>Speed <input id="speed" type="range" min="300" max="1600" value="1200"></label>
+    <span class="counter" id="counter"></span>
+  </div>
+  <div class="quiz" id="quiz" hidden>
+    <div class="q" id="qtext"></div>
+    <div id="qopts"></div>
+    <div class="reveal" id="reveal" hidden></div>
+  </div>
+</div>
+<script>
+const SVG="http://www.w3.org/2000/svg";
+const svg=document.getElementById('svg');
+function el(t,a){const e=document.createElementNS(SVG,t);for(const k in a)e.setAttribute(k,a[k]);return e;}
+function clear(){while(svg.firstChild)svg.removeChild(svg.firstChild);}
+function txt(x,y,s,o){const t=el('text',Object.assign({x,y,'text-anchor':'middle',fill:'#fff','font-size':14},o||{}));t.textContent=s;svg.appendChild(t);}
+
+// s: {M, target, lo, hi, mid, found, title, code}
+function drawBS(s){
+  clear();
+  const R=s.M.length, Cn=s.M[0].length, flat=s.M.flat();
+  txt(320,22,s.title,{'font-size':15,'font-weight':700,fill:'#e0b341'});
+  txt(320,42,'target = '+s.target+'   ·   r, c = divmod(i, COLS='+Cn+')',{fill:'#cfcfe0','font-size':13});
+  // grid
+  const cw=52,ch=30,gx=(640-Cn*cw)/2,gy=58;
+  for(let r=0;r<R;r++)for(let c=0;c<Cn;c++){
+    const i=r*Cn+c, inI=i>=s.lo&&i<=s.hi, isMid=i===s.mid, isF=i===s.found;
+    svg.appendChild(el('rect',{x:gx+c*cw,y:gy+r*ch,width:cw-4,height:ch-4,rx:4,
+      fill:isF?'#2ea043':(isMid?'#e0b341':(inI?'#2b2b3a':'#191922')),stroke:isMid?'#ffd75e':(inI?'#666':'#2a2a33'),'stroke-width':2}));
+    txt(gx+c*cw+(cw-4)/2,gy+r*ch+19,s.M[r][c],{fill:isMid&&!isF?'#15151f':(inI||isF?'#fff':'#555'),'font-size':13});
+  }
+  for(let r=0;r<R;r++)txt(gx-20,gy+r*ch+19,'r='+r,{fill:'#777','font-size':11});
+  for(let c=0;c<Cn;c++)txt(gx+c*cw+(cw-4)/2,gy+R*ch+10,'c='+c,{fill:'#777','font-size':11});
+  // flattened number line
+  const n=flat.length,bw=42,gap=4,x0=(640-(n*bw+(n-1)*gap))/2,y0=220;
+  txt(320,y0-28,'flattened: interval ['+s.lo+', '+s.hi+']'+(s.lo>s.hi?' EMPTY':''),{fill:'#7fb0ff','font-size':12});
+  flat.forEach((v,i)=>{
+    const x=x0+i*(bw+gap), inI=i>=s.lo&&i<=s.hi, isMid=i===s.mid, isF=i===s.found;
+    svg.appendChild(el('rect',{x,y:y0,width:bw,height:34,rx:5,fill:isF?'#2ea043':(isMid?'#e0b341':(inI?'#2b2b3a':'#191922')),stroke:isMid?'#ffd75e':(inI?'#666':'#2a2a33'),'stroke-width':2}));
+    txt(x+bw/2,y0+22,v,{fill:isMid&&!isF?'#15151f':(inI||isF?'#fff':'#555'),'font-size':12});
+    txt(x+bw/2,y0-8,i,{fill:'#777','font-size':10});
+    const names=[]; if(i===s.lo)names.push('lo'); if(i===s.hi)names.push('hi'); if(isMid)names.push('mid');
+    names.forEach((nm,k)=>txt(x+bw/2,y0+52+k*14,'↑'+nm,{fill:nm==='mid'?'#e0b341':'#7fb0ff','font-size':11}));
+  });
+  if(s.code)txt(320,338,s.code,{fill:'#b8b8c8','font-size':13,'font-family':'Menlo,monospace'});
+}
+
+const narration=document.getElementById('narration'),counter=document.getElementById('counter');
+const quiz=document.getElementById('quiz'),qtext=document.getElementById('qtext'),qopts=document.getElementById('qopts'),reveal=document.getElementById('reveal');
+const playBtn=document.getElementById('play'),speed=document.getElementById('speed');
+let STEPS=[],idx=0,timer=null;
+function render(){const s=STEPS[idx];s.draw();narration.textContent=s.note||'';counter.textContent=(idx+1)+' / '+STEPS.length;
+  if(s.question)showQuestion(s.question);else quiz.hidden=true;}
+function showQuestion(q){quiz.hidden=false;qtext.textContent=q.prompt;reveal.hidden=true;qopts.innerHTML='';
+  q.options.forEach((o,i)=>{const b=document.createElement('button');b.textContent=o;
+    b.onclick=()=>{reveal.hidden=false;reveal.textContent=(i===q.answer?'✓ Correct. ':'✗ Not quite. ')+q.explain;};qopts.appendChild(b);});}
+function step(){if(idx<STEPS.length-1){idx++;render();}else pause();}
+function prev(){if(idx>0){idx--;render();}}
+function pause(){clearInterval(timer);timer=null;playBtn.textContent='▶ Play';}
+function play(){if(timer){pause();return;}playBtn.textContent='⏸ Pause';timer=setInterval(()=>{if(idx>=STEPS.length-1){pause();return;}step();},+speed.value);}
+function reset(){pause();idx=0;render();}
+document.getElementById('prev').onclick=prev;
+document.getElementById('step').onclick=()=>{pause();step();};
+document.getElementById('reset').onclick=reset;
+playBtn.onclick=play;
+
+function buildSteps(){
+  const M=[[1,3,5,7],[10,11,16,20],[23,30,34,60]], T=30, P='LC 74 — the matrix IS a sorted number line, folded into rows';
+  const S=(o)=>()=>drawBS(Object.assign({M,target:T,title:P},o));
+  return [
+    {draw:S({lo:0,hi:11,mid:null,code:'lo, hi = 0, ROWS * COLS - 1   # [0, 11]'}),
+     note:'Read row by row, the values are one sorted line of 12. Search the line; only translate to (r, c) when you need to read a value.'},
+    {draw:S({lo:0,hi:11,mid:5,code:'mid = 5 → divmod(5, 4) = (1, 1) → 11'}),
+     note:'mid = 5. 5 // 4 = 1 full row before it, 5 % 4 = 1 step into row 1 → matrix[1][1] = 11. 11 < 30.',
+     question:{prompt:'Position 5 → which (r, c)?',options:['(1, 1)','(1, 2)','(2, 1)'],answer:0,
+       explain:'5 // COLS = 5 // 4 = 1 (one complete row before it), 5 % 4 = 1 (one step into row 1). Only COLS appears.'}},
+    {draw:S({lo:6,hi:11,mid:null,code:'11 < 30 → lo = mid + 1 = 6'}),
+     note:'Exactly classic binary search: [mid + 1, hi] = [6, 11].'},
+    {draw:S({lo:6,hi:11,mid:8,code:'mid = 8 → divmod(8, 4) = (2, 0) → 23'}),
+     note:'mid = 8 → row 2, col 0 → 23 < 30. lo = 9.'},
+    {draw:S({lo:9,hi:11,mid:10,code:'mid = 10 → divmod(10, 4) = (2, 2) → 34'}),
+     note:'mid = 10 → (2, 2) = 34 > 30. hi = 9.',
+     question:{prompt:'Position 10 → (r, c)?',options:['(2, 2)','(3, 1)','(2, 3)'],answer:0,
+       explain:'10 // 4 = 2 complete rows, 10 % 4 = 2 into the row. (3, 1) would come from dividing by ROWS = 3 — the mistake from the pre-test.'}},
+    {draw:S({lo:9,hi:9,mid:9,code:'mid = 9 → divmod(9, 4) = (2, 1) → 30'}),
+     note:'Interval [9, 9], size 1, still open. mid = 9 → (2, 1) = 30.'},
+    {draw:S({lo:9,hi:9,mid:9,found:9,code:'matrix[2][1] == 30 → True'}),
+     note:'Found. 4 looks for 12 cells: O(log(ROWS · COLS)). The only new line vs classic: r, c = divmod(mid, COLS).'}
+  ];
+}
+STEPS=buildSteps();render();
+</script>
+</body>
+</html>
